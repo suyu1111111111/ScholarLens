@@ -1,0 +1,107 @@
+<!--index.wxml-->
+<view class="page">
+  <view class="header">
+    <text class="brand">智阅·深析</text>
+    <view class="search-bar">
+      <text class="search-icon">🔍</text>
+      <input
+        class="search-input"
+        placeholder="搜索论文标题或笔记内容"
+        placeholder-class="search-placeholder"
+        value="{{searchKeyword}}"
+        bindinput="onSearchInput"
+      />
+      <text class="filter-icon" bindtap="onToggleFilter">⫸</text>
+    </view>
+  </view>
+
+  <view class="filter-panel" wx:if="{{showFilter}}">
+    <view class="filter-section">
+      <text class="filter-label">按日期</text>
+      <view class="filter-options">
+        <view
+          class="filter-tag {{filterDate === 'all' ? 'active' : ''}}"
+          data-key="filterDate"
+          data-value="all"
+          bindtap="onFilterChange"
+        >全部</view>
+        <view
+          class="filter-tag {{filterDate === 'week' ? 'active' : ''}}"
+          data-key="filterDate"
+          data-value="week"
+          bindtap="onFilterChange"
+        >最近一周</view>
+        <view
+          class="filter-tag {{filterDate === 'month' ? 'active' : ''}}"
+          data-key="filterDate"
+          data-value="month"
+          bindtap="onFilterChange"
+        >最近一月</view>
+      </view>
+    </view>
+    <view class="filter-section">
+      <text class="filter-label">按标签</text>
+      <view class="filter-options">
+        <view
+          class="filter-tag {{filterTag === 'all' ? 'active' : ''}}"
+          data-key="filterTag"
+          data-value="all"
+          bindtap="onFilterChange"
+        >全部</view>
+        <view
+          class="filter-tag {{filterTag === 'nlp' ? 'active' : ''}}"
+          data-key="filterTag"
+          data-value="nlp"
+          bindtap="onFilterChange"
+        >NLP</view>
+        <view
+          class="filter-tag {{filterTag === 'cv' ? 'active' : ''}}"
+          data-key="filterTag"
+          data-value="cv"
+          bindtap="onFilterChange"
+        >CV</view>
+        <view
+          class="filter-tag {{filterTag === 'system' ? 'active' : ''}}"
+          data-key="filterTag"
+          data-value="system"
+          bindtap="onFilterChange"
+        >系统</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="upload-card" bindtap="onUploadPaper">
+    <view class="upload-card-inner">
+      <text class="upload-icon">📄</text>
+      <text class="upload-title">上传新论文</text>
+      <text class="upload-guide">支持 PDF 格式，随时随地精读</text>
+    </view>
+  </view>
+
+  <view class="recent-section">
+    <view class="section-header">
+      <text class="section-title">最近阅读</text>
+      <text class="section-more" bindtap="onViewAll">查看全部 ›</text>
+    </view>
+
+    <scroll-view class="card-scroll" scroll-x wx:if="{{filteredList.length}}">
+      <view class="card" wx:for="{{filteredList}}" wx:key="id">
+        <text class="card-title">{{item.title}}</text>
+        <text class="card-date">{{item.date}}</text>
+        <view class="progress-bar">
+          <view class="progress-fill" style="width: {{item.progress}}%;"></view>
+        </view>
+        <text class="card-progress-text">已读 {{item.progress}}%</text>
+      </view>
+    </scroll-view>
+
+    <view class="empty-state" wx:else>
+      <view class="empty-illustration">
+        <text class="empty-icon">{{searchKeyword ? '🔎' : '📚'}}</text>
+        <text class="empty-shadow">▁▁▁▁▁</text>
+      </view>
+      <text class="empty-title">{{searchKeyword ? '未找到匹配结果' : '还没有阅读记录'}}</text>
+      <text class="empty-hint">{{searchKeyword ? '试试其他关键词' : '上传一篇论文，开启你的阅读之旅'}}</text>
+    </view>
+  </view>
+</view>

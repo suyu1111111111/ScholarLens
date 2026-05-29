@@ -1,0 +1,19 @@
+# 微信小程序开发者工具生成
+project.private.config.json
+
+# 依赖
+node_modules/
+
+# 云函数依赖（每个云函数单独安装）
+cloudfunctions/*/node_modules/
+
+# 备份文件
+*.docx
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

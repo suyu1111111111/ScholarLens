@@ -1,0 +1,28 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/index/index",
+    "pages/reader/reader",
+    "pages/notes/index",
+    "pages/me/index"
+  ],
+  "window": {
+    "backgroundColor": "#2b2b4b",
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#2b2b4b",
+    "navigationBarTitleText": "智阅深析",
+    "navigationBarTextStyle": "white"
+  },
+  "tabBar": {
+    "custom": true,
+    "list": [
+      { "pagePath": "pages/index/index", "text": "首页" },
+      { "pagePath": "pages/reader/reader", "text": "阅读器" },
+      { "pagePath": "pages/notes/index", "text": "笔记" },
+      { "pagePath": "pages/me/index", "text": "我的" }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

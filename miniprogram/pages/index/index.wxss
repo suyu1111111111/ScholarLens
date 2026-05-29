@@ -1,0 +1,246 @@
+/**index.wxss**/
+
+.page {
+  padding: 40rpx 30rpx 0;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* 顶部 */
+.header {
+  margin-bottom: 20rpx;
+}
+
+.brand {
+  display: block;
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #2b2b4b;
+  letter-spacing: 6rpx;
+  margin-bottom: 28rpx;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  height: 80rpx;
+  padding: 0 20rpx 0 28rpx;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.search-icon {
+  font-size: 30rpx;
+  margin-right: 16rpx;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 28rpx;
+  color: #333;
+}
+
+.search-placeholder {
+  color: #bbb;
+}
+
+.filter-icon {
+  font-size: 32rpx;
+  padding: 10rpx 0 10rpx 16rpx;
+  color: #999;
+}
+
+/* 筛选面板 */
+.filter-panel {
+  margin-bottom: 20rpx;
+  padding: 24rpx;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filter-section {
+  margin-bottom: 20rpx;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  display: block;
+  font-size: 24rpx;
+  color: #999;
+  margin-bottom: 14rpx;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.filter-tag {
+  padding: 10rpx 24rpx;
+  font-size: 24rpx;
+  color: #666;
+  background-color: #f5f5f5;
+  border-radius: 32rpx;
+  border: 2rpx solid transparent;
+}
+
+.filter-tag.active {
+  color: #2b2b4b;
+  background-color: #e8eaf0;
+  border-color: #2b2b4b;
+}
+
+/* 上传卡片 */
+.upload-card {
+  margin-bottom: 40rpx;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.upload-card-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 0;
+  background-color: #2b2b4b;
+}
+
+.upload-icon {
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+}
+
+.upload-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 12rpx;
+}
+
+.upload-guide {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 最近阅读 */
+.recent-section {
+  margin-bottom: 40rpx;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #333;
+}
+
+.section-more {
+  font-size: 26rpx;
+  color: #999;
+}
+
+/* 横向滚动卡片 */
+.card-scroll {
+  white-space: nowrap;
+}
+
+.card {
+  display: inline-block;
+  width: 280rpx;
+  padding: 28rpx;
+  margin-right: 20rpx;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  vertical-align: top;
+  white-space: normal;
+}
+
+.card:last-child {
+  margin-right: 0;
+}
+
+.card-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 12rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-date {
+  display: block;
+  font-size: 22rpx;
+  color: #bbb;
+  margin-bottom: 20rpx;
+}
+
+.progress-bar {
+  height: 6rpx;
+  background-color: #eee;
+  border-radius: 3rpx;
+  margin-bottom: 10rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #2b2b4b;
+  border-radius: 3rpx;
+}
+
+.card-progress-text {
+  font-size: 20rpx;
+  color: #aaa;
+}
+
+/* 空状态 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 0 40rpx;
+}
+
+.empty-illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 32rpx;
+}
+
+.empty-icon {
+  font-size: 100rpx;
+  margin-bottom: 4rpx;
+}
+
+.empty-shadow {
+  font-size: 40rpx;
+  color: #e0e0e0;
+  letter-spacing: 4rpx;
+}
+
+.empty-title {
+  font-size: 28rpx;
+  color: #999;
+  margin-bottom: 12rpx;
+}
+
+.empty-hint {
+  font-size: 24rpx;
+  color: #ccc;
+}

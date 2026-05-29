@@ -1,0 +1,46 @@
+<!--notes.wxml-->
+<view class="page">
+  <view class="tab-bar">
+    <view
+      class="tab-item {{currentTab === 'all' ? 'active' : ''}}"
+      data-tab="all"
+      bindtap="onSwitchTab"
+    >全部</view>
+    <view
+      class="tab-item {{currentTab === 'paper' ? 'active' : ''}}"
+      data-tab="paper"
+      bindtap="onSwitchTab"
+    >按论文</view>
+    <view
+      class="tab-item {{currentTab === 'type' ? 'active' : ''}}"
+      data-tab="type"
+      bindtap="onSwitchTab"
+    >按类型</view>
+  </view>
+
+  <view class="search-bar">
+    <text class="search-icon">🔍</text>
+    <input class="search-input" placeholder="搜索笔记" placeholder-class="search-placeholder" />
+  </view>
+
+  <view class="note-list" wx:if="{{notes.length}}">
+    <view class="note-card" wx:for="{{notes}}" wx:key="id">
+      <view class="note-color-bar" style="background-color: {{item.color}};"></view>
+      <view class="note-body">
+        <text class="note-excerpt">{{item.excerpt}}</text>
+        <text class="note-annotation">{{item.annotation}}</text>
+      </view>
+      <view class="note-meta">
+        <text class="note-date">{{item.date}}</text>
+        <text class="note-source">{{item.source}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:else>
+    <text class="empty-icon">✍️</text>
+    <text class="empty-text">暂无笔记</text>
+    <text class="empty-hint">去阅读页，划选文字即可创建笔记</text>
+    <button class="go-read-btn" bindtap="onGoRead">前往阅读</button>
+  </view>
+</view>

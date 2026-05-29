@@ -1,0 +1,15 @@
+<web-view wx:if="{{status === 'ready'}}" src="{{pdfWebViewUrl}}"></web-view>
+
+<view wx:else class="page">
+  <view wx:if="{{status === 'uploading'}}" class="uploading-state">
+    <text class="uploading-icon">📤</text>
+    <text class="uploading-text">正在上传论文...</text>
+    <text class="uploading-filename">{{fileName}}</text>
+  </view>
+
+  <view wx:else class="empty-state">
+    <text class="book-icon">📖</text>
+    <text class="hint">选择一篇论文开始阅读</text>
+    <button class="select-btn" bindtap="onSelectFile">选择文件</button>
+  </view>
+</view>

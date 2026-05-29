@@ -1,0 +1,65 @@
+<!-- 初始状态：登录界面 -->
+<view class="login-page" wx:if="{{status === 'idle'}}">
+  <!-- 装饰背景 -->
+  <view class="bg-decor">
+    <view class="circle circle-1"></view>
+    <view class="circle circle-2"></view>
+    <view class="circle circle-3"></view>
+    <view class="dot-grid">
+      <view class="dot-row" wx:for="{{6}}" wx:key="*this">
+        <view class="dot" wx:for="{{6}}" wx:for-item="d" wx:key="*this"></view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 品牌区 -->
+  <view class="brand-area">
+    <view class="logo-ring">
+      <view class="logo-inner">
+        <text class="logo-icon">📖</text>
+      </view>
+    </view>
+    <text class="brand-name">智阅 · 深析</text>
+    <text class="brand-desc">AI 驱动的学术论文精读助手</text>
+  </view>
+
+  <!-- 操作区 -->
+  <view class="action-area">
+    <button class="login-btn" bindtap="onLogin">
+      <text class="wx-icon">◈</text>
+      <text class="login-text">微信授权登录</text>
+    </button>
+    <text class="privacy-hint">登录即表示同意《用户协议》和《隐私政策》</text>
+  </view>
+</view>
+
+<!-- 授权中 -->
+<view class="login-page status-overlay" wx:elif="{{status === 'authorizing'}}">
+  <view class="bg-decor">
+    <view class="circle circle-1"></view>
+    <view class="circle circle-2"></view>
+    <view class="circle circle-3"></view>
+  </view>
+  <view class="status-box">
+    <view class="loading-dots">
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+      <view class="loading-dot"></view>
+    </view>
+    <text class="status-text">正在获取授权...</text>
+  </view>
+</view>
+
+<!-- 登录成功 -->
+<view class="login-page status-overlay" wx:elif="{{status === 'entering'}}">
+  <view class="bg-decor">
+    <view class="circle circle-1"></view>
+    <view class="circle circle-2"></view>
+    <view class="circle circle-3"></view>
+  </view>
+  <view class="status-box">
+    <view class="success-check">✓</view>
+    <text class="status-text">登录成功</text>
+    <text class="status-sub">正在进入智阅深析...</text>
+  </view>
+</view>

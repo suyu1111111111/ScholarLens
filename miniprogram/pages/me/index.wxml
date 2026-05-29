@@ -1,0 +1,81 @@
+<!--me.wxml-->
+<view class="page">
+  <view class="identity-card" bindtap="onEditProfile">
+    <view class="avatar">
+      <image class="avatar-img" src="{{profile.avatarUrl}}" mode="aspectFill" wx:if="{{profile.avatarUrl}}"></image>
+      <text class="avatar-text" wx:else>👤</text>
+    </view>
+    <view class="identity-info">
+      <text class="nickname">{{profile.nickname}}</text>
+      <text class="signature">{{profile.signature}}</text>
+    </view>
+    <text class="edit-arrow">›</text>
+  </view>
+
+  <view class="stats-row">
+    <view class="stat-item">
+      <text class="stat-num">{{stats.readCount}}</text>
+      <text class="stat-label">已读论文</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-num">{{stats.noteCount}}</text>
+      <text class="stat-label">笔记总数</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-num">{{stats.exportCount}}</text>
+      <text class="stat-label">导出次数</text>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="group-title">阅读设置</view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="onTapItem" data-key="preference">
+        <text class="menu-label">阅读偏好</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="onTapItem" data-key="fontSize">
+        <text class="menu-label">字体大小</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="group-title">数据管理</view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="onTapItem" data-key="exportNote">
+        <text class="menu-label">笔记导出</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="onTapItem" data-key="paperManage">
+        <text class="menu-label">论文管理</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="group-title">其他</view>
+    <view class="menu-card">
+      <view class="menu-item" bindtap="onTapItem" data-key="about">
+        <text class="menu-label">关于我们</text>
+        <text class="menu-arrow">›</text>
+      </view>
+      <view class="menu-item" bindtap="onTapItem" data-key="feedback">
+        <text class="menu-label">用户反馈</text>
+        <text class="menu-arrow">›</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="menu-group">
+    <view class="menu-card">
+      <view class="menu-item logout-item" bindtap="onLogout">
+        <text class="logout-label">退出登录</text>
+      </view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,253 @@
+.login-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #1a1a2e 0%, #2b2b4b 40%, #1e3a5f 100%);
+  padding: 0 60rpx;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* ===== 背景装饰 ===== */
+.bg-decor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.circle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.06;
+}
+
+.circle-1 {
+  width: 600rpx;
+  height: 600rpx;
+  background: #fff;
+  top: -180rpx;
+  right: -160rpx;
+}
+
+.circle-2 {
+  width: 400rpx;
+  height: 400rpx;
+  background: #fff;
+  bottom: 120rpx;
+  left: -120rpx;
+}
+
+.circle-3 {
+  width: 200rpx;
+  height: 200rpx;
+  background: #fff;
+  top: 60%;
+  right: 40rpx;
+}
+
+.dot-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.dot-row {
+  display: flex;
+  gap: 40rpx;
+}
+
+.dot {
+  width: 6rpx;
+  height: 6rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 20rpx 0;
+}
+
+/* ===== 品牌区 ===== */
+.brand-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.logo-ring {
+  width: 180rpx;
+  height: 180rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 40rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.1);
+}
+
+.logo-inner {
+  width: 130rpx;
+  height: 130rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon {
+  font-size: 64rpx;
+  filter: grayscale(0%);
+}
+
+.brand-name {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 10rpx;
+  margin-bottom: 16rpx;
+}
+
+.brand-desc {
+  font-size: 26rpx;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 4rpx;
+}
+
+/* ===== 操作区 ===== */
+.action-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 120rpx;
+  z-index: 1;
+}
+
+.login-btn {
+  width: 520rpx;
+  height: 100rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  background: rgba(255, 255, 255, 0.95);
+  color: #2b2b4b;
+  font-size: 32rpx;
+  font-weight: 600;
+  border-radius: 50rpx;
+  border: none;
+  box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+}
+
+.login-btn:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.login-btn::after {
+  border: none;
+}
+
+.wx-icon {
+  font-size: 36rpx;
+  color: #07c160;
+}
+
+.login-text {
+  letter-spacing: 2rpx;
+}
+
+.privacy-hint {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.25);
+  margin-top: 28rpx;
+}
+
+/* ===== 状态过渡层 ===== */
+.status-overlay {
+  justify-content: center;
+}
+
+.status-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+
+/* 加载动画点 */
+.loading-dots {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 40rpx;
+}
+
+.loading-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.loading-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* 成功勾 */
+.success-check {
+  width: 100rpx;
+  height: 100rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48rpx;
+  color: #fff;
+  margin-bottom: 36rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.2);
+}
+
+.status-text {
+  font-size: 36rpx;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 4rpx;
+  font-weight: 500;
+}
+
+.status-sub {
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.4);
+  margin-top: 14rpx;
+  letter-spacing: 2rpx;
+}
+
+.status-icon {
+  font-size: 80rpx;
+  margin-bottom: 30rpx;
+}

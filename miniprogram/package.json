@@ -1,0 +1,8 @@
+{
+  "name": "zhidu-shenxi",
+  "version": "1.0.0",
+  "description": "智阅深析 - 智能论文阅读助手",
+  "dependencies": {
+    "@babel/runtime": "^7.21.0"
+  }
+}

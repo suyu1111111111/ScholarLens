@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=3.0, user-scalable=yes">
+  <title>PDF 阅读器</title>
+  <script src="pdf.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #525659; padding-bottom: 56px; }
+    canvas { display: block; margin: 10px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.5); max-width: 100%; }
+    .toolbar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center; gap: 24px;
+      padding: 10px; background: rgba(50,54,57,0.95); color: #fff;
+    }
+    .toolbar button {
+      padding: 8px 24px; border: none; border-radius: 4px;
+      background: #555; color: #fff; font-size: 14px;
+    }
+    .toolbar button:active { background: #777; }
+    .toolbar span { font-size: 14px; min-width: 100px; text-align: center; }
+    .loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 100vh; color: #ccc; font-size: 16px;
+    }
+    .error {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      height: 100vh; color: #e54545; font-size: 16px; gap: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="status" class="loading">加载中...</div>
+  <canvas id="pdfCanvas" style="display:none;"></canvas>
+  <div class="toolbar" id="toolbar" style="display:none;">
+    <button id="btnPrev">上一页</button>
+    <span>第 <span id="pageNum">0</span> / <span id="pageCount">0</span> 页</span>
+    <button id="btnNext">下一页</button>
+  </div>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+
+    var pdfDoc = null;
+    var pageNum = 1;
+    var pageRendering = false;
+    var pageNumPending = null;
+    var scale = 1.5;
+
+    var canvas = document.getElementById('pdfCanvas');
+    var ctx = canvas.getContext('2d');
+    var statusEl = document.getElementById('status');
+    var toolbarEl = document.getElementById('toolbar');
+
+    function renderPage(num) {
+      pageRendering = true;
+      pdfDoc.getPage(num).then(function (page) {
+        var viewport = page.getViewport({ scale: scale });
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        var renderContext = { canvasContext: ctx, viewport: viewport };
+        var renderTask = page.render(renderContext);
+
+        renderTask.promise.then(function () {
+          pageRendering = false;
+          if (pageNumPending !== null) {
+            renderPage(pageNumPending);
+            pageNumPending = null;
+          }
+        });
+      });
+
+      document.getElementById('pageNum').textContent = num;
+    }
+
+    function queueRenderPage(num) {
+      if (pageRendering) {
+        pageNumPending = num;
+      } else {
+        renderPage(num);
+      }
+    }
+
+    document.getElementById('btnPrev').onclick = function () {
+      if (pageNum <= 1) return;
+      pageNum--;
+      queueRenderPage(pageNum);
+    };
+
+    document.getElementById('btnNext').onclick = function () {
+      if (pageNum >= pdfDoc.numPages) return;
+      pageNum++;
+      queueRenderPage(pageNum);
+    };
+
+    // 从 URL hash 读取 PDF 地址并加载
+    var hash = window.location.hash.substring(1);
+    if (hash) {
+      var pdfUrl = decodeURIComponent(hash);
+      pdfjsLib.getDocument(pdfUrl).promise.then(function (pdf) {
+        pdfDoc = pdf;
+        document.getElementById('pageCount').textContent = pdf.numPages;
+        statusEl.style.display = 'none';
+        canvas.style.display = 'block';
+        toolbarEl.style.display = 'flex';
+        renderPage(pageNum);
+      }).catch(function (err) {
+        statusEl.className = 'error';
+        statusEl.innerHTML = '<div>PDF 加载失败</div><div style="font-size:12px;color:#999;">' + err.message + '</div>';
+      });
+    } else {
+      statusEl.innerHTML = '未找到 PDF 文件';
+    }
+  </script>
+</body>
+</html>

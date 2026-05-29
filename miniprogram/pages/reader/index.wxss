@@ -1,0 +1,97 @@
+/**reader.wxss**/
+
+.container {
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 30rpx;
+  box-sizing: border-box;
+}
+
+.loading {
+  text-align: center;
+  margin-top: 200rpx;
+  color: #888;
+  font-size: 28rpx;
+}
+
+.article {
+  flex: 1;
+  padding-bottom: 100rpx;
+}
+
+.article-header {
+  margin-bottom: 40rpx;
+}
+
+.article-title {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20rpx;
+  line-height: 1.4;
+}
+
+.article-meta {
+  display: flex;
+  gap: 30rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.article-content {
+  line-height: 2;
+  color: #444;
+  text-align: justify;
+  white-space: pre-wrap;
+}
+
+.toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40rpx;
+  padding: 20rpx 0;
+  background-color: rgba(255, 255, 255, 0.95);
+  border-top: 1rpx solid #eee;
+  box-shadow: 0 -2rpx 10rpx rgba(0, 0, 0, 0.05);
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
+}
+
+.toolbar-btn {
+  display: inline-block;
+  width: 60rpx;
+  height: 60rpx;
+  line-height: 60rpx;
+  text-align: center;
+  border: 2rpx solid #ccc;
+  border-radius: 50%;
+  font-size: 24rpx;
+  color: #666;
+}
+
+.color-picker {
+  display: flex;
+  gap: 16rpx;
+}
+
+.color-btn {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 50%;
+  border: 3rpx solid transparent;
+  box-sizing: border-box;
+}
+
+.color-btn.active {
+  border-color: #07c160;
+}
