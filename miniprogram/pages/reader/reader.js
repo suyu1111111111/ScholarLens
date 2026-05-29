@@ -1,4 +1,5 @@
-const CLOUD_FUNCTION_URL = 'https://cloud1-d7gomttv5c8fdacc9.service.tcloudbase.com/pdfReader';
+// GitHub Pages 地址：https://suyu1111111111.github.io/ScholarLens/reader.html
+const READER_PAGE_URL = 'https://suyu1111111111.github.io/ScholarLens/reader.html';
 
 Page({
   data: {
@@ -60,7 +61,7 @@ Page({
           fileList: [res.fileID],
           success: (result) => {
             const pdfUrl = result.fileList[0].tempFileURL;
-            const readerUrl = CLOUD_FUNCTION_URL + '?pdfUrl=' + encodeURIComponent(pdfUrl);
+            const readerUrl = READER_PAGE_URL + '?pdfUrl=' + encodeURIComponent(pdfUrl);
             that.setData({
               status: 'ready',
               pdfWebViewUrl: readerUrl,
