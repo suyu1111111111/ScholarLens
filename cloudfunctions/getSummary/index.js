@@ -44,36 +44,16 @@ const AI_MODEL = process.env.AI_MODEL || 'deepseek-chat';
 // ========== PDF 文本提取 ==========
 async function extractPdfText(fileID) {
   const res = await cloud.downloadFile({ fileID });
-  const pdfBuffer = res.fileContent;
+  const pdfBuffer = Buffer.from(res.fileContent);
+  const pdfParse = require('pdf-parse');
+  const data = await pdfParse(pdfBuffer);
 
-  // 使用 pdfjs-dist 提取文本
-  const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
-
-  // pdf.js worker 配置
-  const loadingTask = pdfjsLib.getDocument({
-    data: new Uint8Array(pdfBuffer),
-    disableAutoFetch: true,
-    disableStream: true,
-  });
-
-  const pdfDoc = await loadingTask.promise;
-  const numPages = Math.min(pdfDoc.numPages, 50); // 最多 50 页
-  let fullText = '';
-
-  for (let i = 1; i <= numPages; i++) {
-    const page = await pdfDoc.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items.map((item) => item.str).join(' ');
-    fullText += pageText + '\n';
-  }
-
-  // 截断到合理长度（AI 模型 token 限制）
   const maxChars = 8000;
-  const truncated = fullText.length > maxChars
-    ? fullText.substring(0, maxChars) + '...[文本已截断]'
-    : fullText;
+  const truncated = data.text.length > maxChars
+    ? data.text.substring(0, maxChars) + '...[文本已截断]'
+    : data.text;
 
-  return { text: truncated, pageCount: pdfDoc.numPages, textLength: fullText.length };
+  return { text: truncated, pageCount: data.numpages, textLength: data.text.length };
 }
 
 // ========== AI API 调用（兼容 Node.js） ==========
