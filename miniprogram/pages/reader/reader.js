@@ -1,11 +1,25 @@
-// HTTP 访问服务地址
 const READER_BASE_URL = 'https://cloud1-d7gomttv5c8fdacc9-1325686913.ap-shanghai.app.tcloudbase.com/pdfReader';
+
+const ROLE_CONFIG = {
+  ben: { name: '学生', icon: '🎓', desc: '通俗讲解' },
+  alice: { name: '研究者', icon: '🔬', desc: '深度分析' },
+  david: { name: '职场', icon: '💼', desc: '商业洞察' },
+};
 
 Page({
   data: {
     status: 'empty',
     fileName: '',
     pdfWebViewUrl: '',
+    fileID: '',
+
+    // 摘要
+    activeRole: 'ben',
+    roles: ROLE_CONFIG,
+    summary: null,
+    summaryText: '',
+    paperInfo: null,
+    summaryLoading: false,
   },
 
   onShow() {
@@ -50,17 +64,22 @@ Page({
   },
 
   openPdf(filePath, fileName) {
-    this.setData({ status: 'uploading', fileName: fileName });
+    this.setData({
+      status: 'uploading',
+      fileName: fileName,
+      summary: null,
+      summaryText: '',
+      paperInfo: null,
+    });
     const that = this;
 
-    // 1. 上传 PDF 到云存储
     wx.cloud.uploadFile({
       cloudPath: 'papers/' + Date.now() + '_' + fileName,
       filePath: filePath,
       success: (res) => {
-        // 2. 云函数通过 fileID 从云存储下载 PDF，嵌入 HTML，返回完整页面
-        const readerUrl = READER_BASE_URL + '?fileID=' + encodeURIComponent(res.fileID);
-        that.setData({ status: 'ready', pdfWebViewUrl: readerUrl });
+        that.setData({ fileID: res.fileID });
+        // 上传完成后自动生成摘要
+        that.generateSummary(res.fileID, fileName, 'ben');
       },
       fail: (err) => {
         console.error('上传 PDF 失败:', err);
@@ -68,6 +87,76 @@ Page({
         that.setData({ status: 'empty' });
       },
     });
+  },
+
+  // ========== AI 摘要生成 ==========
+  generateSummary(fileID, fileName, role) {
+    this.setData({ status: 'analyzing', summaryLoading: true });
+
+    const that = this;
+    wx.cloud.callFunction({
+      name: 'getSummary',
+      data: {
+        action: 'generate',
+        fileID: fileID,
+        fileName: fileName,
+        role: role,
+      },
+      success: (res) => {
+        if (res.result && res.result.success) {
+          const summary = res.result.summary;
+          that.setData({
+            status: 'summarized',
+            summary: summary,
+            summaryText: typeof summary === 'string' ? summary : summary.text,
+            paperInfo: res.result.paperInfo || {},
+            summaryLoading: false,
+            activeRole: role,
+          });
+        } else {
+          wx.showToast({
+            title: '摘要生成失败: ' + (res.result ? res.result.errMsg : '未知错误'),
+            icon: 'none',
+            duration: 3000,
+          });
+          // 失败也允许阅读
+          that.setData({ status: 'summarized', summaryLoading: false });
+        }
+      },
+      fail: (err) => {
+        console.error('云函数调用失败:', err);
+        wx.showToast({ title: '摘要服务暂不可用，可直接阅读', icon: 'none', duration: 2500 });
+        that.setData({ status: 'summarized', summaryLoading: false });
+      },
+    });
+  },
+
+  // 切换角色重新生成
+  onRoleChange(e) {
+    const role = e.currentTarget.dataset.role;
+    if (role === this.data.activeRole) return;
+
+    const { fileID, fileName } = this.data;
+    if (fileID) {
+      this.generateSummary(fileID, fileName, role);
+    }
+  },
+
+  // 进入阅读
+  onStartRead() {
+    const { fileID } = this.data;
+    if (!fileID) return;
+
+    const readerUrl = READER_BASE_URL + '?fileID=' + encodeURIComponent(fileID);
+    this.setData({
+      status: 'reading',
+      pdfWebViewUrl: readerUrl,
+    });
+  },
+
+  // 从阅读返回摘要
+  onBackToSummary() {
+    this.setData({ status: 'summarized', pdfWebViewUrl: '' });
   },
 
   onToolTap(e) {

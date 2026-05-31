@@ -3,35 +3,207 @@
   flex-direction: column;
   min-height: 100vh;
   box-sizing: border-box;
+  background: #f5f5f5;
 }
 
-/* 上传中 */
-.uploading-state {
+/* ========== 居中状态（上传中/分析中） ========== */
+.center-state {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40rpx;
+  padding: 60rpx;
 }
 
-.uploading-icon {
-  font-size: 80rpx;
+.state-icon {
+  font-size: 100rpx;
   margin-bottom: 30rpx;
 }
 
-.uploading-text {
-  font-size: 28rpx;
-  color: #999;
+.state-text {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
   margin-bottom: 12rpx;
 }
 
-.uploading-filename {
+.state-filename {
   font-size: 24rpx;
-  color: #bbb;
+  color: #999;
 }
 
-/* 空状态 */
+.state-hint {
+  font-size: 24rpx;
+  color: #bbb;
+  margin-top: 8rpx;
+}
+
+/* 分析中动画 */
+.analyzing-icon {
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-20rpx); }
+}
+
+.dot-pulse {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 40rpx;
+}
+
+.dot {
+  width: 14rpx;
+  height: 14rpx;
+  border-radius: 50%;
+  background: #1a73e8;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ========== 摘要页面 ========== */
+.summary-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20rpx 24rpx;
+}
+
+/* 文件信息条 */
+.file-info-bar {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.file-icon { font-size: 36rpx; margin-right: 12rpx; }
+.file-name {
+  flex: 1;
+  font-size: 26rpx;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.file-pages {
+  font-size: 22rpx;
+  color: #999;
+  margin-left: 12rpx;
+}
+
+/* 角色标签 */
+.role-tabs {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.role-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20rpx 12rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  border: 2rpx solid transparent;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.role-tab.active {
+  border-color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.role-icon { font-size: 40rpx; margin-bottom: 6rpx; }
+.role-name { font-size: 26rpx; color: #333; font-weight: 500; }
+.role-desc { font-size: 20rpx; color: #999; margin-top: 4rpx; }
+
+.role-loading {
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+  right: 10%;
+  height: 4rpx;
+  background: linear-gradient(90deg, transparent, #1a73e8, transparent);
+  animation: slide 1.2s ease-in-out infinite;
+}
+
+@keyframes slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 摘要内容 */
+.summary-scroll {
+  flex: 1;
+  margin-bottom: 20rpx;
+}
+
+.summary-card {
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 28rpx 24rpx;
+}
+
+.summary-text {
+  font-size: 28rpx;
+  color: #333;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.summary-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300rpx;
+  background: #fff;
+  border-radius: 12rpx;
+}
+
+.summary-empty text {
+  font-size: 26rpx;
+  color: #ccc;
+}
+
+/* 操作按钮 */
+.summary-actions {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.btn-read {
+  width: 100%;
+  height: 88rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1a73e8;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 12rpx;
+  border: none;
+}
+
+.btn-read::after { border: none; }
+
+/* ========== 空状态 ========== */
 .empty-state {
   flex: 1;
   display: flex;
@@ -41,17 +213,9 @@
   padding: 40rpx;
 }
 
-.book-icon {
-  font-size: 140rpx;
-  margin-bottom: 40rpx;
-}
-
-.hint {
-  font-size: 28rpx;
-  color: #999;
-  letter-spacing: 2rpx;
-  margin-bottom: 60rpx;
-}
+.book-icon { font-size: 140rpx; margin-bottom: 40rpx; }
+.hint { font-size: 28rpx; color: #999; letter-spacing: 2rpx; margin-bottom: 12rpx; }
+.sub-hint { font-size: 22rpx; color: #ccc; margin-bottom: 60rpx; }
 
 .select-btn {
   width: 360rpx;
@@ -66,6 +230,4 @@
   border: 2rpx solid #ccc;
 }
 
-.select-btn::after {
-  border: none;
-}
+.select-btn::after { border: none; }

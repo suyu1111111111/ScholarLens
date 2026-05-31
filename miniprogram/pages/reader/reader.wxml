@@ -1,15 +1,71 @@
-<web-view wx:if="{{status === 'ready'}}" src="{{pdfWebViewUrl}}"></web-view>
+<web-view wx:if="{{status === 'reading'}}" src="{{pdfWebViewUrl}}" bindmessage="onWebViewMessage"></web-view>
 
 <view wx:else class="page">
-  <view wx:if="{{status === 'uploading'}}" class="uploading-state">
-    <text class="uploading-icon">📤</text>
-    <text class="uploading-text">正在上传论文...</text>
-    <text class="uploading-filename">{{fileName}}</text>
+  <!-- 上传中 -->
+  <view wx:if="{{status === 'uploading'}}" class="center-state">
+    <text class="state-icon">📤</text>
+    <text class="state-text">正在上传论文...</text>
+    <text class="state-filename">{{fileName}}</text>
   </view>
 
+  <!-- AI 分析中 -->
+  <view wx:elif="{{status === 'analyzing'}}" class="center-state">
+    <text class="state-icon analyzing-icon">🤖</text>
+    <text class="state-text">AI 正在阅读论文...</text>
+    <text class="state-hint">提取文本并生成摘要，预计 10-30 秒</text>
+    <view class="dot-pulse">
+      <view class="dot"></view>
+      <view class="dot"></view>
+      <view class="dot"></view>
+    </view>
+  </view>
+
+  <!-- 摘要展示 -->
+  <view wx:elif="{{status === 'summarized'}}" class="summary-page">
+    <!-- 文件信息 -->
+    <view class="file-info-bar">
+      <text class="file-icon">📄</text>
+      <text class="file-name">{{fileName}}</text>
+      <text class="file-pages" wx:if="{{paperInfo.pageCount}}">{{paperInfo.pageCount}}页</text>
+    </view>
+
+    <!-- 角色切换 -->
+    <view class="role-tabs">
+      <view
+        wx:for="{{['ben','alice','david']}}"
+        wx:key="*this"
+        class="role-tab {{activeRole === item ? 'active' : ''}}"
+        data-role="{{item}}"
+        bindtap="onRoleChange"
+      >
+        <text class="role-icon">{{roles[item].icon}}</text>
+        <text class="role-name">{{roles[item].name}}</text>
+        <text class="role-desc">{{roles[item].desc}}</text>
+        <view wx:if="{{activeRole === item && summaryLoading}}" class="role-loading"></view>
+      </view>
+    </view>
+
+    <!-- 摘要内容 -->
+    <scroll-view class="summary-scroll" scroll-y enhanced show-scrollbar="{{false}}">
+      <view wx:if="{{summaryText}}" class="summary-card">
+        <text class="summary-text">{{summaryText}}</text>
+      </view>
+      <view wx:else class="summary-empty">
+        <text>点击上方角色标签生成摘要</text>
+      </view>
+    </scroll-view>
+
+    <!-- 操作按钮 -->
+    <view class="summary-actions">
+      <button class="btn-read" bindtap="onStartRead">📖 进入阅读</button>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
   <view wx:else class="empty-state">
     <text class="book-icon">📖</text>
     <text class="hint">选择一篇论文开始阅读</text>
+    <text class="sub-hint">上传后 AI 将自动生成摘要</text>
     <button class="select-btn" bindtap="onSelectFile">选择文件</button>
   </view>
 </view>

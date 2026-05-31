@@ -1,0 +1,10 @@
+{
+  "name": "getSummary",
+  "version": "1.0.0",
+  "description": "Extract PDF text and generate AI summary",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.4.0",
+    "pdfjs-dist": "2.2.2"
+  }
+}
