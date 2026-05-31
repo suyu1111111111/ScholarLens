@@ -76,13 +76,35 @@ async function extractPdfText(fileID) {
   return { text: truncated, pageCount: pdfDoc.numPages, textLength: fullText.length };
 }
 
-// ========== AI API 调用 ==========
+// ========== AI API 调用（兼容 Node.js） ==========
+function httpsRequest(url, options) {
+  const https = require('https');
+  const http = require('http');
+  const { URL } = require('url');
+
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const mod = parsed.protocol === 'https:' ? https : http;
+    const req = mod.request(url, {
+      method: options.method || 'POST',
+      headers: options.headers || {},
+    }, (res) => {
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => resolve({ statusCode: res.statusCode, body: body }));
+    });
+    req.on('error', reject);
+    if (options.body) req.write(options.body);
+    req.end();
+  });
+}
+
 async function callAI(systemPrompt, paperText) {
   if (!AI_API_KEY) {
     throw new Error('AI_API_KEY 未配置，请在云函数环境变量中设置 API Key');
   }
 
-  const response = await fetch(AI_API_ENDPOINT, {
+  const res = await httpsRequest(AI_API_ENDPOINT, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -99,12 +121,11 @@ async function callAI(systemPrompt, paperText) {
     }),
   });
 
-  if (!response.ok) {
-    const errBody = await response.text();
-    throw new Error('AI API 错误 ' + response.status + ': ' + errBody);
+  if (res.statusCode !== 200) {
+    throw new Error('AI API 错误 ' + res.statusCode + ': ' + res.body);
   }
 
-  const data = await response.json();
+  const data = JSON.parse(res.body);
   return data.choices[0].message.content;
 }
 
