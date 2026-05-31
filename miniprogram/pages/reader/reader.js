@@ -95,7 +95,7 @@ Page({
 
     const that = this;
     wx.cloud.callFunction({
-      name: 'getSummary',
+      name: 'pdfSummary',
       data: {
         action: 'generate',
         fileID: fileID,
