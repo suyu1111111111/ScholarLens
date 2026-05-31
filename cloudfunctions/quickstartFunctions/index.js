@@ -1,185 +1,111 @@
 const cloud = require("wx-server-sdk");
-cloud.init({
-  env: cloud.DYNAMIC_CURRENT_ENV,
-});
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
 const db = cloud.database();
-// 获取openid
-const getOpenId = async () => {
-  // 获取基础信息
-  const wxContext = cloud.getWXContext();
+
+// ========== HTTP 触发器：PDF 阅读器 ==========
+async function handleHttpRequest(event) {
+  var base64Pdf = '';
+  var errorMsg = '';
+
+  var fileID = null;
+  if (event.queryStringParameters && event.queryStringParameters.fileID) {
+    fileID = event.queryStringParameters.fileID;
+  }
+
+  if (fileID) {
+    try {
+      const res = await cloud.downloadFile({ fileID });
+      base64Pdf = res.fileContent.toString('base64');
+    } catch (err) {
+      errorMsg = err.message;
+    }
+  }
+
+  if (!base64Pdf && !errorMsg) {
+    errorMsg = '缺少 fileID 参数';
+  }
+
+  if (errorMsg) {
+    return {
+      statusCode: 200,
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      body: '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="display:flex;align-items:center;justify-content:center;height:100vh;color:#e54545;font-size:16px;font-family:sans-serif"><div>错误：' + errorMsg + '</div></body></html>',
+    };
+  }
+
   return {
-    openid: wxContext.OPENID,
-    appid: wxContext.APPID,
-    unionid: wxContext.UNIONID,
+    statusCode: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    body: '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=3,user-scalable=yes"><title>PDF 阅读器</title><script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.2/pdf.min.js"><\/script><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#525659;padding-bottom:56px}canvas{display:block;margin:10px auto;box-shadow:0 2px 12px rgba(0,0,0,.5);max-width:100%}.toolbar{position:fixed;bottom:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:center;gap:24px;padding:10px;background:rgba(50,54,57,.95);color:#fff}.toolbar button{padding:8px 24px;border:none;border-radius:4px;background:#555;color:#fff;font-size:14px}.toolbar button:active{background:#777}.toolbar span{font-size:14px;min-width:100px;text-align:center}.loading{display:flex;align-items:center;justify-content:center;height:100vh;color:#ccc;font-size:16px}.error{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#e54545;font-size:16px;gap:16px}<\/style><\/head><body><div id="status" class="loading">加载中...</div><canvas id="pdfCanvas" style="display:none"></canvas><div class="toolbar" id="toolbar" style="display:none"><button id="btnPrev">上一页</button><span>第 <span id="pageNum">0</span> / <span id="pageCount">0</span> 页</span><button id="btnNext">下一页</button></div><script>pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.2/pdf.worker.min.js";var pdfDoc=null,pageNum=1,pageRendering=!1,pageNumPending=null,scale=1.5;var canvas=document.getElementById("pdfCanvas"),ctx=canvas.getContext("2d");var statusEl=document.getElementById("status"),toolbarEl=document.getElementById("toolbar");function renderPage(n){pageRendering=!0;pdfDoc.getPage(n).then(function(p){var v=p.getViewport({scale:scale});canvas.height=v.height;canvas.width=v.width;var t=p.render({canvasContext:ctx,viewport:v});t.promise.then(function(){pageRendering=!1,pageNumPending!==null&&(renderPage(pageNumPending),pageNumPending=null)})}),document.getElementById("pageNum").textContent=n}function queueRenderPage(n){pageRendering?pageNumPending=n:renderPage(n)}document.getElementById("btnPrev").onclick=function(){pageNum<=1||(pageNum--,queueRenderPage(pageNum))};document.getElementById("btnNext").onclick=function(){pageNum>=pdfDoc.numPages||(pageNum++,queueRenderPage(pageNum))};var pdfData="data:application/pdf;base64,' + base64Pdf + '";pdfjsLib.getDocument(pdfData).promise.then(function(p){pdfDoc=p,document.getElementById("pageCount").textContent=p.numPages,statusEl.style.display="none",canvas.style.display="block",toolbarEl.style.display="flex",renderPage(pageNum)}).catch(function(e){statusEl.className="error",statusEl.innerHTML=\'<div>PDF 加载失败</div><div style="font-size:12px;color:#999">\'+e.message+"</div>"})<\/script></body></html>',
   };
+}
+
+// ========== 原有功能 ==========
+const getOpenId = async () => {
+  const wxContext = cloud.getWXContext();
+  return { openid: wxContext.OPENID, appid: wxContext.APPID, unionid: wxContext.UNIONID };
 };
 
-// 获取小程序二维码
 const getMiniProgramCode = async () => {
-  // 获取小程序二维码的buffer
-  const resp = await cloud.openapi.wxacode.get({
-    path: "pages/index/index",
-  });
+  const resp = await cloud.openapi.wxacode.get({ path: "pages/index/index" });
   const { buffer } = resp;
-  // 将图片上传云存储空间
-  const upload = await cloud.uploadFile({
-    cloudPath: "code.png",
-    fileContent: buffer,
-  });
+  const upload = await cloud.uploadFile({ cloudPath: "code.png", fileContent: buffer });
   return upload.fileID;
 };
 
-// 创建集合
 const createCollection = async () => {
   try {
-    // 创建集合
     await db.createCollection("sales");
-    await db.collection("sales").add({
-      // data 字段表示需新增的 JSON 数据
-      data: {
-        region: "华东",
-        city: "上海",
-        sales: 11,
-      },
-    });
-    await db.collection("sales").add({
-      // data 字段表示需新增的 JSON 数据
-      data: {
-        region: "华东",
-        city: "南京",
-        sales: 11,
-      },
-    });
-    await db.collection("sales").add({
-      // data 字段表示需新增的 JSON 数据
-      data: {
-        region: "华南",
-        city: "广州",
-        sales: 22,
-      },
-    });
-    await db.collection("sales").add({
-      // data 字段表示需新增的 JSON 数据
-      data: {
-        region: "华南",
-        city: "深圳",
-        sales: 22,
-      },
-    });
-    return {
-      success: true,
-    };
+    await db.collection("sales").add({ data: { region: "华东", city: "上海", sales: 11 } });
+    await db.collection("sales").add({ data: { region: "华东", city: "南京", sales: 11 } });
+    await db.collection("sales").add({ data: { region: "华南", city: "广州", sales: 22 } });
+    await db.collection("sales").add({ data: { region: "华南", city: "深圳", sales: 22 } });
+    return { success: true };
   } catch (e) {
-    // 这里catch到的是该collection已经存在，从业务逻辑上来说是运行成功的，所以catch返回success给前端，避免工具在前端抛出异常
-    return {
-      success: true,
-      data: "create collection success",
-    };
+    return { success: true, data: "create collection success" };
   }
 };
 
-// 查询数据
-const selectRecord = async () => {
-  // 返回数据库查询结果
-  return await db.collection("sales").get();
-};
+const selectRecord = async () => { return await db.collection("sales").get(); };
 
-// 更新数据
 const updateRecord = async (event) => {
   try {
-    // 遍历修改数据库信息
     for (let i = 0; i < event.data.length; i++) {
-      await db
-        .collection("sales")
-        .where({
-          _id: event.data[i]._id,
-        })
-        .update({
-          data: {
-            sales: event.data[i].sales,
-          },
-        });
+      await db.collection("sales").where({ _id: event.data[i]._id }).update({ data: { sales: event.data[i].sales } });
     }
-    return {
-      success: true,
-      data: event.data,
-    };
-  } catch (e) {
-    return {
-      success: false,
-      errMsg: e,
-    };
-  }
+    return { success: true, data: event.data };
+  } catch (e) { return { success: false, errMsg: e }; }
 };
 
-// 新增数据
 const insertRecord = async (event) => {
   try {
-    const insertRecord = event.data;
-    // 插入数据
-    await db.collection("sales").add({
-      data: {
-        region: insertRecord.region,
-        city: insertRecord.city,
-        sales: Number(insertRecord.sales),
-      },
-    });
-    return {
-      success: true,
-      data: event.data,
-    };
-  } catch (e) {
-    return {
-      success: false,
-      errMsg: e,
-    };
-  }
+    await db.collection("sales").add({ data: { region: event.data.region, city: event.data.city, sales: Number(event.data.sales) } });
+    return { success: true, data: event.data };
+  } catch (e) { return { success: false, errMsg: e }; }
 };
 
-// 删除数据
 const deleteRecord = async (event) => {
   try {
-    await db
-      .collection("sales")
-      .where({
-        _id: event.data._id,
-      })
-      .remove();
-    return {
-      success: true,
-    };
-  } catch (e) {
-    return {
-      success: false,
-      errMsg: e,
-    };
-  }
+    await db.collection("sales").where({ _id: event.data._id }).remove();
+    return { success: true };
+  } catch (e) { return { success: false, errMsg: e }; }
 };
 
-// const getOpenId = require('./getOpenId/index');
-// const getMiniProgramCode = require('./getMiniProgramCode/index');
-// const createCollection = require('./createCollection/index');
-// const selectRecord = require('./selectRecord/index');
-// const updateRecord = require('./updateRecord/index');
-// const fetchGoodsList = require('./fetchGoodsList/index');
-// const genMpQrcode = require('./genMpQrcode/index');
-// 云函数入口函数
 exports.main = async (event, context) => {
+  // HTTP 触发器调用
+  if (event.httpMethod) {
+    return await handleHttpRequest(event);
+  }
+
+  // 微信小程序内部调用
   switch (event.type) {
-    case "getOpenId":
-      return await getOpenId();
-    case "getMiniProgramCode":
-      return await getMiniProgramCode();
-    case "createCollection":
-      return await createCollection();
-    case "selectRecord":
-      return await selectRecord();
-    case "updateRecord":
-      return await updateRecord(event);
-    case "insertRecord":
-      return await insertRecord(event);
-    case "deleteRecord":
-      return await deleteRecord(event);
+    case "getOpenId": return await getOpenId();
+    case "getMiniProgramCode": return await getMiniProgramCode();
+    case "createCollection": return await createCollection();
+    case "selectRecord": return await selectRecord();
+    case "updateRecord": return await updateRecord(event);
+    case "insertRecord": return await insertRecord(event);
+    case "deleteRecord": return await deleteRecord(event);
   }
 };

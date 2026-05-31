@@ -1,4 +1,5 @@
-const READER_PAGE_URL = 'https://cloud1-d7gomttv5c8fdacc9.tcloudbaseapp.com/reader.html';
+// HTTP 访问服务地址
+const READER_BASE_URL = 'https://cloud1-d7gomttv5c8fdacc9-1325686913.ap-shanghai.app.tcloudbase.com/pdfReader';
 
 Page({
   data: {
@@ -52,25 +53,14 @@ Page({
     this.setData({ status: 'uploading', fileName: fileName });
     const that = this;
 
+    // 1. 上传 PDF 到云存储
     wx.cloud.uploadFile({
       cloudPath: 'papers/' + Date.now() + '_' + fileName,
       filePath: filePath,
       success: (res) => {
-        wx.cloud.getTempFileURL({
-          fileList: [res.fileID],
-          success: (result) => {
-            const pdfUrl = result.fileList[0].tempFileURL;
-            const readerUrl = READER_PAGE_URL + '?pdfUrl=' + encodeURIComponent(pdfUrl);
-            that.setData({
-              status: 'ready',
-              pdfWebViewUrl: readerUrl,
-            });
-          },
-          fail: () => {
-            wx.showToast({ title: '获取文件链接失败', icon: 'none' });
-            that.setData({ status: 'empty' });
-          },
-        });
+        // 2. 云函数通过 fileID 从云存储下载 PDF，嵌入 HTML，返回完整页面
+        const readerUrl = READER_BASE_URL + '?fileID=' + encodeURIComponent(res.fileID);
+        that.setData({ status: 'ready', pdfWebViewUrl: readerUrl });
       },
       fail: (err) => {
         console.error('上传 PDF 失败:', err);
