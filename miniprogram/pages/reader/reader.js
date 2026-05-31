@@ -1,5 +1,4 @@
-// GitHub Pages 地址：https://suyu1111111111.github.io/ScholarLens/reader.html
-const READER_PAGE_URL = 'https://suyu1111111111.github.io/ScholarLens/reader.html';
+const READER_PAGE_URL = 'https://cloud1-d7gomttv5c8fdacc9.tcloudbaseapp.com/reader.html';
 
 Page({
   data: {
