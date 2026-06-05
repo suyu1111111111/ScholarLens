@@ -20,6 +20,20 @@ pdf.js (CDN) 在 web-view 中渲染 PDF
 - HTTP 访问地址：`https://cloud1-d7gomttv5c8fdacc9-1325686913.ap-shanghai.app.tcloudbase.com/pdfReader`
 - 云函数代码见 `cloudfunctions/pdfReader/index.js`
 
+> **2026-06-02 修正**：HTTP 访问服务方案已废弃。`app.tcloudbase.com` 测试域名会强制弹出"页面访问提示"拦截页，控制台「安全管控」中无关闭入口（仅含 QPS 限频/防盗链/IP 黑白名单），绑自定义域名才能去除。
+>
+> 当前方案改为**静态网站托管**：
+> ```
+> reader.js 调 wx.cloud.getTempFileURL → 获取 PDF 临时 COS 链接
+>         ↓
+> web-view ← 静态网站托管 URL ?pdfUrl=<COS链接>&page=<进度>
+>         ↓
+> reader.html（托管在静态网站）用 pdf.js 加载 PDF 并渲染
+> ```
+> - 静态托管域名：`https://cloud1-d7gomttv5c8fdacc9-1325686913.tcloudbaseapp.com`
+> - 部署步骤：控制台 → 静态网站托管 → 文件管理 → 上传 `reader.html`
+> - 修改 reader.html 后 URL 带 `?v=N` 绕开 CDN 缓存
+
 ### 1.2 踩坑记录
 
 | 方案 | 问题 | 结论 |
@@ -33,6 +47,19 @@ pdf.js (CDN) 在 web-view 中渲染 PDF
 | PDF base64 嵌入 HTML + 云存储 | 云存储 Content-Disposition: attachment | ❌ 白屏 |
 | 无后缀上传到云存储 | 同样被加 Content-Disposition | ❌ 白屏 |
 
+> **2026-06-02 补充踩坑**：
+>
+> | 方案 | 问题 | 结论 |
+> |------|------|------|
+> | 云函数 query 传参（HTTP 访问服务） | 测试域名强制弹出安全提示页，控制台无关闭开关 | ❌ 改用静态托管 |
+> | 静态托管 CDN 缓存 | 修改 reader.html 后 CDN 仍返回旧版 | URL 带版本号 `?v=N` 绕开 |
+> | reader.html scale=1.5 | 页面远超手机屏宽（612pt×1.5=918px vs 375px 屏） | 改为自适应适配宽度 |
+> | 动态缩放太小 | fitWidth 后约 0.59x 文字过小 | 适配宽度为默认 + 缩放按钮手动调 |
+> | 连续滚动 vs 逐页翻页 | 逐页模式体验差，用户期望像小说阅读器滑动 | 改为所有页面纵向排列自然滚动 |
+> | web-view fixed 工具栏偏移 | 页面横向溢出时 fixed 元素被推出视口 | `overflow-x:hidden` + `z-index:999` + `width:100%` |
+> | 返回按钮无效 | postMessage 与 navigateBack 存在竞态 | 延迟 150ms 发进度 + `history.back()` 兜底 |
+> | CloudBase 静态托管域名 | 含 `-1325686913` 账号后缀 | 格式：`<env-id>-<account-id>.tcloudbaseapp.com` |
+
 ### 1.3 HTTP 访问服务配置步骤
 
 1. 云开发控制台 → 云函数 → 找到函数 → 触发器标签
@@ -43,6 +70,8 @@ pdf.js (CDN) 在 web-view 中渲染 PDF
    - 资源对象：`pdfReader`
    - 身份认证：不开启
 4. 保存后复制 HTTP 访问地址
+
+> **2026-06-02 修正**：此方案已废弃（见 1.1 修正），`pdfReader` 云函数保留备用。当前阅读器改为静态托管 `reader.html` + `getTempFileURL`。
 
 ### 1.4 安全规则
 
@@ -186,6 +215,8 @@ git config user.email "2308636309@qq.com"
 
 `pdfjs-dist`（~4MB）部署失败 → 改用 `pdf-parse`（轻量级封装），API 更简洁。
 
+> **2026-06-02 补充**：云函数偶发 SSL 报错 `ssl3_read_bytes:tlsv1 alert access denied`（errCode: -504002），为 DeepSeek API 临时拒绝 TLS 连接，非代码问题。重试通常恢复，持续报错则检查 `AI_API_KEY` 是否有效。
+
 ---
 
 ## 7. 关键文件索引
@@ -198,3 +229,7 @@ git config user.email "2308636309@qq.com"
 | `miniprogram/pages/login/login.js` | 登录页 |
 | `miniprogram/app.js` | 全局配置 + 登录态检查 |
 | `miniprogram/custom-tab-bar/` | 自定义底部导航 |
+
+> **2026-06-02 补充**：
+> - `reader.html`（项目根目录）— 独立 PDF 阅读器页面，上传到静态网站托管，支持连续滚动、选中批注、翻译、缩放
+> - `pdfReader` 云函数已废弃保留备用，阅读器改用静态托管方案

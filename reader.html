@@ -4,85 +4,369 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=3,user-scalable=yes">
 <title>PDF 阅读器</title>
+<script src="https://res.wx.qq.com/open/js/jweixin-1.6.0.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.2/pdf.min.js"></script>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #525659; padding-bottom: 56px; }
-canvas { display: block; margin: 10px auto; box-shadow: 0 2px 12px rgba(0,0,0,0.5); max-width: 100%; }
-.toolbar {
-  position: fixed; bottom: 0; left: 0; right: 0; z-index: 10;
-  display: flex; align-items: center; justify-content: center; gap: 24px;
-  padding: 10px; background: rgba(50,54,57,0.95); color: #fff;
-}
-.toolbar button { padding: 8px 24px; border: none; border-radius: 4px; background: #555; color: #fff; font-size: 14px; }
-.toolbar button:active { background: #777; }
-.toolbar span { font-size: 14px; min-width: 100px; text-align: center; }
-.loading { display: flex; align-items: center; justify-content: center; height: 100vh; color: #ccc; font-size: 16px; }
-.error { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; color: #e54545; font-size: 16px; gap: 16px; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#525659;padding-bottom:60px;overflow-x:auto;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.page-wrap{position:relative;margin:6px auto;box-shadow:0 2px 12px rgba(0,0,0,.5);overflow:hidden}
+canvas{display:block}
+.textLayer{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;opacity:1}
+.textLayer span{color:transparent;position:absolute;white-space:pre;transform-origin:0 0;cursor:text;transform:scaleX(-1)}
+.textLayer span::selection{background:rgba(0,100,255,.3);color:transparent}
+.toolbar{position:fixed;bottom:0;left:0;width:100%;z-index:999;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(50,54,57,.98);color:#fff;gap:6px;box-sizing:border-box}
+.toolbar button{padding:6px 12px;border:none;border-radius:4px;background:#555;color:#fff;font-size:13px;white-space:nowrap}
+.toolbar button:active{background:#777}
+.toolbar button.zoom-btn{background:#444;font-size:16px;width:36px;height:36px;padding:0;border-radius:50%;font-weight:bold;line-height:36px}
+.toolbar button.back-btn{background:#1a73e8;font-size:14px;padding:8px 20px;border-radius:6px;font-weight:bold}
+.toolbar span{font-size:12px;text-align:center;white-space:nowrap}
+.loading{display:flex;align-items:center;justify-content:center;height:100vh;color:#ccc;font-size:16px}
+.error{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;color:#e54545;font-size:16px;gap:16px}
+.annotate-popup{display:none;position:fixed;z-index:20;background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.3);padding:12px;min-width:240px;max-width:90vw}
+.annotate-popup.show{display:block}
+.annotate-popup .sel-text{font-size:13px;color:#333;line-height:1.5;max-height:80px;overflow-y:auto;padding:8px;background:#f0f4ff;border-radius:4px;margin-bottom:8px;border-left:3px solid #1a73e8}
+.annotate-popup textarea{width:100%;height:60px;font-size:13px;border:1px solid #ddd;border-radius:4px;padding:8px;resize:none;outline:none}
+.annotate-popup textarea:focus{border-color:#1a73e8}
+.annotate-popup .popup-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:8px}
+.annotate-popup .popup-actions button{padding:6px 16px;border:none;border-radius:4px;font-size:13px}
+.annotate-popup .btn-save{background:#1a73e8;color:#fff}
+.annotate-popup .btn-translate{background:#34a853;color:#fff}
+.annotate-popup .btn-close{background:#eee;color:#666}
+.annotate-popup .btn-translate:disabled{background:#999}
+.highlight-rect{position:absolute;background:rgba(255,235,59,.4);pointer-events:none;mix-blend-mode:multiply;border-radius:2px}
+.badge{position:absolute;top:-4px;right:-4px;background:#e54545;color:#fff;font-size:10px;min-width:16px;height:16px;line-height:16px;border-radius:8px;text-align:center}
+.toast{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;font-size:14px;padding:10px 20px;border-radius:8px;z-index:30;pointer-events:none}
+.toast.show{display:block;animation:fadeIn .3s}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 </style>
 </head>
 <body>
+
 <div id="status" class="loading">加载中...</div>
-<canvas id="pdfCanvas" style="display:none"></canvas>
+<div id="pagesContainer"></div>
+
 <div class="toolbar" id="toolbar" style="display:none">
-  <button id="btnPrev">上一页</button>
-  <span>第 <span id="pageNum">0</span> / <span id="pageCount">0</span> 页</span>
-  <button id="btnNext">下一页</button>
+  <button id="btnZoomOut" class="zoom-btn">−</button>
+  <span style="font-size:13px">字体</span>
+  <span id="zoomLabel" style="min-width:40px">100%</span>
+  <button id="btnZoomIn" class="zoom-btn">+</button>
+  <span style="flex:1"></span>
+  <button id="btnBack" class="back-btn" onclick="doBack()">← 返回</button>
 </div>
+
+<div class="annotate-popup" id="annotatePopup">
+  <div class="sel-text" id="selTextDisplay"></div>
+  <div class="sel-text" id="transResult" style="display:none;background:#f0fff0;border-left-color:#34a853"></div>
+  <textarea id="annotateInput" placeholder="添加批注（可选）"></textarea>
+  <div class="popup-actions">
+    <button class="btn-close" id="btnCancel">取消</button>
+    <button class="btn-translate" id="btnTranslate">翻译</button>
+    <button class="btn-save" id="btnSave">保存标注</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.2.2/pdf.worker.min.js';
-var pdfDoc = null, pageNum = 1, pageRendering = false, pageNumPending = null, scale = 1.5;
-var canvas = document.getElementById('pdfCanvas'), ctx = canvas.getContext('2d');
-var statusEl = document.getElementById('status'), toolbarEl = document.getElementById('toolbar');
 
-function renderPage(num) {
-  pageRendering = true;
-  pdfDoc.getPage(num).then(function(page) {
-    var viewport = page.getViewport({ scale: scale });
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-    var renderTask = page.render({ canvasContext: ctx, viewport: viewport });
-    renderTask.promise.then(function() {
-      pageRendering = false;
-      if (pageNumPending !== null) { renderPage(pageNumPending); pageNumPending = null; }
-    });
-  });
-  document.getElementById('pageNum').textContent = num;
+function getParam(name) {
+  var m = location.search.match(new RegExp('[?&]' + name + '=([^&]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
 }
 
-function queueRenderPage(num) {
-  if (pageRendering) pageNumPending = num;
-  else renderPage(num);
-}
+var startPage = parseInt(getParam('page')) || 1;
+var pdfUrl = getParam('pdfUrl');
 
-document.getElementById('btnPrev').onclick = function() {
-  if (pageNum <= 1) return;
-  pageNum--; queueRenderPage(pageNum);
-};
-document.getElementById('btnNext').onclick = function() {
-  if (pageNum >= pdfDoc.numPages) return;
-  pageNum++; queueRenderPage(pageNum);
-};
-
-// 从 URL query 参数读取 PDF 地址
-var params = new URLSearchParams(window.location.search);
-var pdfUrl = params.get('pdfUrl');
-if (pdfUrl) {
-  pdfjsLib.getDocument(pdfUrl).promise.then(function(pdf) {
-    pdfDoc = pdf;
-    document.getElementById('pageCount').textContent = pdf.numPages;
-    statusEl.style.display = 'none';
-    canvas.style.display = 'block';
-    toolbarEl.style.display = 'flex';
-    renderPage(pageNum);
-  }).catch(function(err) {
-    statusEl.className = 'error';
-    statusEl.innerHTML = '<div>PDF 加载失败</div><div style="font-size:12px;color:#999">' + err.message + '</div>';
-  });
+if (!pdfUrl) {
+  document.getElementById('status').className = 'error';
+  document.getElementById('status').innerHTML = '<div>未找到 PDF 文件</div><div style="font-size:12px;color:#999">缺少 pdfUrl 参数</div>';
 } else {
-  statusEl.className = 'error';
-  statusEl.innerHTML = '<div>未找到 PDF 文件</div><div style="font-size:12px;color:#999">请重新选择文件</div>';
+  var pdfDoc = null, scale = 1.0, currentPage = 1;
+  var pagesContainer = document.getElementById('pagesContainer');
+  var statusEl = document.getElementById('status');
+  var toolbarEl = document.getElementById('toolbar');
+  var popup = document.getElementById('annotatePopup');
+  var selTextDisplay = document.getElementById('selTextDisplay');
+  var annotateInput = document.getElementById('annotateInput');
+  var toast = document.getElementById('toast');
+  var zoomLabel = document.getElementById('zoomLabel');
+  var annotations = [], currentSelection = null;
+  var renderedPages = [];
+
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.className = 'toast show';
+    setTimeout(function(){ toast.className = 'toast'; }, 1500);
+  }
+
+  function updateZoomLabel() {
+    zoomLabel.textContent = Math.round(scale * 100) + '%';
+  }
+
+  // 始终按屏幕宽度适配
+  function calcScale(pageWidth) {
+    var sw = document.documentElement.clientWidth || window.innerWidth;
+    return Math.round(((sw - 16) / pageWidth) * 100) / 100;
+  }
+
+  function renderAllPages() {
+    pagesContainer.innerHTML = '';
+    renderedPages = [];
+    var total = pdfDoc.numPages;
+
+    for (var n = 1; n <= total; n++) {
+      (function(pageNum) {
+        pdfDoc.getPage(pageNum).then(function(page) {
+          var vp = page.getViewport({scale: scale});
+          var wrap = document.createElement('div');
+          wrap.className = 'page-wrap';
+          wrap.style.width = vp.width + 'px';
+          wrap.style.height = vp.height + 'px';
+          wrap.setAttribute('data-page', pageNum);
+
+          var canvas = document.createElement('canvas');
+          canvas.width = vp.width;
+          canvas.height = vp.height;
+          wrap.appendChild(canvas);
+
+          var ctx = canvas.getContext('2d');
+          page.render({canvasContext: ctx, viewport: vp}).promise.then(function() {
+            var pageAnnots = annotations.filter(function(a){ return a.page === pageNum; });
+            pageAnnots.forEach(function(a){
+              var rect = document.createElement('div');
+              rect.className = 'highlight-rect';
+              rect.style.left = a.x + 'px';
+              rect.style.top = a.y + 'px';
+              rect.style.width = a.w + 'px';
+              rect.style.height = a.h + 'px';
+              wrap.appendChild(rect);
+            });
+
+            page.getTextContent().then(function(textContent) {
+              var textLayer = document.createElement('div');
+              textLayer.className = 'textLayer';
+              textLayer.style.width = vp.width + 'px';
+              textLayer.style.height = vp.height + 'px';
+
+              textContent.items.forEach(function(item) {
+                if (!item.str || !item.str.trim()) return;
+                var tx = item.transform;
+                var span = document.createElement('span');
+                span.textContent = item.str;
+                span.style.left = tx[4] + 'px';
+                span.style.top = (vp.height - tx[5] - item.height) + 'px';
+                span.style.fontSize = item.height * 0.9 + 'px';
+                span.style.fontFamily = item.fontName || 'sans-serif';
+                if (item.width) span.style.width = item.width + 'px';
+                textLayer.appendChild(span);
+              });
+
+              wrap.appendChild(textLayer);
+            });
+          });
+
+          renderedPages.push({ wrap: wrap, num: pageNum });
+          pagesContainer.appendChild(wrap);
+        });
+      })(n);
+    }
+  }
+
+  function sendProgress() {
+    var visiblePage = 1;
+    var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+    var bestDist = Infinity;
+    for (var i = 0; i < renderedPages.length; i++) {
+      var el = renderedPages[i].wrap;
+      var rect = el.getBoundingClientRect();
+      var dist = Math.abs(rect.top);
+      if (dist < bestDist) {
+        bestDist = dist;
+        visiblePage = renderedPages[i].num;
+      }
+    }
+    currentPage = visiblePage;
+    wx.miniProgram.postMessage({data: {type: 'progress', page: currentPage, annotations: annotations}});
+  }
+
+  // 滚动监听：更新当前页码 + 发送进度
+  var scrollTimer = null;
+  document.addEventListener('scroll', function() {
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(sendProgress, 500);
+  }, {passive: true});
+
+  // 文字选择
+  document.addEventListener('mouseup', handleSelection);
+  document.addEventListener('touchend', function(e){
+    setTimeout(handleSelection, 300);
+  });
+
+  function handleSelection() {
+    var sel = window.getSelection();
+    var text = sel.toString().trim();
+    if (!text || text.length < 2) return;
+
+    var range = sel.getRangeAt(0);
+    var textLayer = document.querySelector('.textLayer');
+    if (!textLayer || !textLayer.contains(range.commonAncestorContainer)) return;
+
+    // 确定当前页
+    var pageWrap = range.commonAncestorContainer.closest('.page-wrap');
+    var pageNum = pageWrap ? parseInt(pageWrap.getAttribute('data-page')) : currentPage;
+
+    currentSelection = {
+      text: text,
+      page: pageNum,
+      rect: range.getBoundingClientRect()
+    };
+
+    selTextDisplay.textContent = text;
+    annotateInput.value = '';
+    var transDiv = document.getElementById('transResult');
+    transDiv.style.display = 'none';
+
+    var top = currentSelection.rect.bottom + 8;
+    var left = Math.max(10, currentSelection.rect.left);
+    if (top + 200 > window.innerHeight) {
+      top = currentSelection.rect.top - 180;
+    }
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+    popup.style.right = 'auto';
+    popup.style.bottom = 'auto';
+    popup.className = 'annotate-popup show';
+    annotateInput.focus();
+  }
+
+  document.getElementById('btnCancel').onclick = function(){
+    popup.className = 'annotate-popup';
+    document.getElementById('transResult').style.display = 'none';
+    window.getSelection().removeAllRanges();
+  };
+
+  document.getElementById('btnTranslate').onclick = function(){
+    if (!currentSelection) return;
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '翻译中...';
+    var transDiv = document.getElementById('transResult');
+    transDiv.style.display = 'none';
+
+    fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh&dt=t&q=' + encodeURIComponent(currentSelection.text))
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if (data && data[0]) {
+          transDiv.textContent = data[0].map(function(e){ return e[0]; }).join('');
+          transDiv.style.display = 'block';
+        } else {
+          transDiv.textContent = '翻译失败';
+          transDiv.style.display = 'block';
+        }
+        btn.disabled = false;
+        btn.textContent = '翻译';
+      })
+      .catch(function(){
+        transDiv.textContent = '翻译服务不可用';
+        transDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '翻译';
+      });
+  };
+
+  document.getElementById('btnSave').onclick = function(){
+    if (!currentSelection) return;
+    var wrap = document.querySelector('.page-wrap[data-page="' + currentSelection.page + '"]');
+    if (!wrap) return;
+    var wrapRect = wrap.getBoundingClientRect();
+    var note = {
+      id: Date.now(),
+      text: currentSelection.text,
+      annotation: annotateInput.value.trim(),
+      page: currentSelection.page,
+      x: currentSelection.rect.left - wrapRect.left,
+      y: currentSelection.rect.top - wrapRect.top,
+      w: currentSelection.rect.width,
+      h: currentSelection.rect.height,
+      time: new Date().toISOString()
+    };
+    annotations.push(note);
+    popup.className = 'annotate-popup';
+    window.getSelection().removeAllRanges();
+    showToast('已保存 ' + annotations.length + ' 条标注');
+    updateBadge();
+    // 重新渲染高亮
+    renderAllPages();
+  };
+
+  function updateBadge() {
+    var badge = document.getElementById('badge');
+    if (annotations.length > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'badge';
+        badge.className = 'badge';
+        document.getElementById('btnBack').appendChild(badge);
+      }
+      badge.textContent = annotations.length;
+    } else if (badge) {
+      badge.remove();
+    }
+  }
+
+  // 缩放
+  document.getElementById('btnZoomOut').onclick = function(){
+    if (scale <= 0.5) return;
+    scale = Math.max(0.5, scale - 0.2);
+    scale = Math.round(scale * 10) / 10;
+    updateZoomLabel();
+    renderAllPages();
+    sendProgress();
+  };
+  document.getElementById('btnZoomIn').onclick = function(){
+    if (scale >= 2.5) return;
+    scale = Math.min(2.5, scale + 0.2);
+    scale = Math.round(scale * 10) / 10;
+    updateZoomLabel();
+    renderAllPages();
+    sendProgress();
+  };
+
+  // 返回按钮：postMessage 后 navigateBack，触发 bindmessage 让小程序退出阅读
+  window.doBack = function(){
+    wx.miniProgram.postMessage({data: {type: 'back', page: currentPage, annotations: annotations}});
+    wx.miniProgram.navigateBack({delta: 1});
+  };
+  document.getElementById('btnBack').onclick = function(){ doBack(); };
+
+  // ====== 加载 PDF ======
+  pdfjsLib.getDocument(pdfUrl).promise.then(function(p) {
+    pdfDoc = p;
+    // 先获取首页计算缩放
+    return p.getPage(1).then(function(page) {
+      var vp = page.getViewport({scale: 1});
+      scale = calcScale(vp.width);
+      updateZoomLabel();
+      return p;
+    });
+  }).then(function(p) {
+    pdfDoc = p;
+    statusEl.style.display = 'none';
+    toolbarEl.style.display = 'flex';
+    renderAllPages();
+    // 滚动到上次阅读位置
+    if (startPage > 1) {
+      setTimeout(function() {
+        var target = document.querySelector('.page-wrap[data-page="' + startPage + '"]');
+        if (target) target.scrollIntoView();
+      }, 500);
+    }
+    sendProgress();
+  }).catch(function(e) {
+    statusEl.className = 'error';
+    statusEl.innerHTML = '<div>PDF 加载失败</div><div style="font-size:12px;color:#999">' + e.message + '</div>';
+  });
 }
 </script>
 </body>

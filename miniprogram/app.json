@@ -3,6 +3,7 @@
     "pages/login/login",
     "pages/index/index",
     "pages/reader/reader",
+    "pages/read-text/read-text",
     "pages/notes/index",
     "pages/me/index"
   ],

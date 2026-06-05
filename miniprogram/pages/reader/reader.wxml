@@ -1,6 +1,4 @@
-<web-view wx:if="{{status === 'reading'}}" src="{{pdfWebViewUrl}}" bindmessage="onWebViewMessage"></web-view>
-
-<view wx:else class="page">
+<view class="page">
   <!-- 上传中 -->
   <view wx:if="{{status === 'uploading'}}" class="center-state">
     <text class="state-icon">📤</text>
@@ -22,11 +20,17 @@
 
   <!-- 摘要展示 -->
   <view wx:elif="{{status === 'summarized'}}" class="summary-page">
-    <!-- 文件信息 -->
-    <view class="file-info-bar">
-      <text class="file-icon">📄</text>
-      <text class="file-name">{{fileName}}</text>
-      <text class="file-pages" wx:if="{{paperInfo.pageCount}}">{{paperInfo.pageCount}}页</text>
+    <!-- 顶部栏：文件名 + 角色 -->
+    <view class="top-bar">
+      <view class="top-file">
+        <text class="top-file-icon">📄</text>
+        <text class="top-file-name">{{fileName}}</text>
+        <text class="top-file-pages" wx:if="{{paperInfo.pageCount}}">{{paperInfo.pageCount}}页</text>
+        <text class="fav-star {{isFavorite ? 'active' : ''}}" bindtap="onToggleFavorite">{{isFavorite ? '⭐' : '☆'}}</text>
+      </view>
+      <view class="top-tags" wx:if="{{docTags.length}}">
+        <text class="tag-chip-mini" wx:for="{{docTags}}" wx:key="*this">{{item}}</text>
+      </view>
     </view>
 
     <!-- 角色切换 -->
@@ -40,32 +44,128 @@
       >
         <text class="role-icon">{{roles[item].icon}}</text>
         <text class="role-name">{{roles[item].name}}</text>
-        <text class="role-desc">{{roles[item].desc}}</text>
         <view wx:if="{{activeRole === item && summaryLoading}}" class="role-loading"></view>
       </view>
     </view>
 
     <!-- 摘要内容 -->
     <scroll-view class="summary-scroll" scroll-y enhanced show-scrollbar="{{false}}">
-      <view wx:if="{{summaryText}}" class="summary-card">
-        <text class="summary-text">{{summaryText}}</text>
+      <view wx:if="{{summaryError}}" class="summary-error-card">
+        <text class="summary-error-title">摘要生成失败</text>
+        <text class="summary-error-text" user-select="{{true}}">{{summaryError}}</text>
+      </view>
+      <view wx:elif="{{summaryText}}" class="summary-card">
+        <text class="summary-text" user-select="{{true}}">{{summaryText}}</text>
       </view>
       <view wx:else class="summary-empty">
-        <text>点击上方角色标签生成摘要</text>
+        <text class="summary-empty-text">点击上方角色标签生成摘要</text>
       </view>
     </scroll-view>
 
     <!-- 操作按钮 -->
     <view class="summary-actions">
-      <button class="btn-read" bindtap="onStartRead">📖 进入阅读</button>
+      <button class="btn-read" bindtap="onStartRead">📖 开始阅读</button>
+      <view class="actions-grid">
+        <button class="act-btn" bindtap="onAddNote">✍️ 笔记</button>
+        <button class="act-btn" bindtap="onExport">📋 导出</button>
+        <button class="act-btn" bindtap="onGenerateMindmap">🧠 导图</button>
+        <button class="act-btn" open-type="share">🔗 分享</button>
+      </view>
+      <view class="manage-row">
+        <text class="manage-btn" bindtap="onToggleTagInput">{{showTagInput ? '取消' : '+ 标签'}}</text>
+        <text class="manage-btn danger" bindtap="onDeleteDoc">删除</text>
+      </view>
+      <view class="tag-input-row" wx:if="{{showTagInput}}">
+        <input class="tag-input-inline" value="{{tagInputValue}}" bindinput="onTagInput" bindconfirm="onAddTag" placeholder="输入标签，回车确认" focus />
+      </view>
     </view>
+  </view>
+
+  <!-- 思维导图视图 -->
+  <view wx:if="{{showMindmap}}" class="mindmap-view">
+    <view class="mindmap-header">
+      <text class="mindmap-title">🧠 思维导图</text>
+      <text class="mindmap-close" bindtap="onCloseMindmap">✕</text>
+    </view>
+    <scroll-view class="mindmap-scroll" scroll-y wx:if="{{!mindmapLoading}}">
+      <view class="tree-root">
+        <block wx:for="{{mindmapTree}}" wx:key="index">
+          <view class="tree-node level-1">
+            <view class="tree-label-wrap">
+              <view class="tree-dot level-1-dot"></view>
+              <text class="tree-label level-1-label">{{item.label}}</text>
+            </view>
+            <view wx:if="{{item.children.length}}" class="tree-children">
+              <block wx:for="{{item.children}}" wx:for-item="child" wx:key="index">
+                <view class="tree-node level-2">
+                  <view class="tree-label-wrap">
+                    <view class="tree-dot level-2-dot"></view>
+                    <text class="tree-label level-2-label">{{child.label}}</text>
+                  </view>
+                  <view wx:if="{{child.children.length}}" class="tree-children">
+                    <block wx:for="{{child.children}}" wx:for-item="leaf" wx:key="index">
+                      <view class="tree-node level-3">
+                        <view class="tree-label-wrap">
+                          <view class="tree-dot level-3-dot"></view>
+                          <text class="tree-label level-3-label">{{leaf.label}}</text>
+                        </view>
+                      </view>
+                    </block>
+                  </view>
+                </view>
+              </block>
+            </view>
+          </view>
+        </block>
+      </view>
+    </scroll-view>
+    <view wx:if="{{mindmapLoading}}" class="mindmap-loading">
+      <text>AI 正在构建知识结构...</text>
+    </view>
+  </view>
+
+  <!-- 导出菜单弹窗 -->
+  <view class="export-modal-mask" wx:if="{{showExportMenu}}" catchtap="onCloseExportMenu"></view>
+  <view class="export-modal" wx:if="{{showExportMenu}}">
+    <view class="export-modal-header">
+      <text class="export-modal-title">导出摘要</text>
+      <text class="export-modal-close" bindtap="onCloseExportMenu">✕</text>
+    </view>
+    <button class="export-option" bindtap="onCopyMarkdown">
+      <text class="export-option-icon">📋</text>
+      <view class="export-option-body">
+        <text class="export-option-title">复制为 Markdown</text>
+        <text class="export-option-desc">复制到剪贴板，可粘贴到笔记</text>
+      </view>
+    </button>
+    <button class="export-option" bindtap="onExportImage">
+      <text class="export-option-icon">🖼️</text>
+      <view class="export-option-body">
+        <text class="export-option-title">导出为图片</text>
+        <text class="export-option-desc">生成图片，适合分享</text>
+      </view>
+    </button>
+  </view>
+
+  
+  <!-- 写笔记弹窗 -->
+  <view class="note-modal-mask" wx:if="{{showNoteModal}}" catchtap="onCloseNoteModal"></view>
+  <view class="note-modal" wx:if="{{showNoteModal}}">
+    <view class="note-modal-header">
+      <text class="note-modal-title">写笔记</text>
+      <text class="note-modal-close" bindtap="onCloseNoteModal">✕</text>
+    </view>
+    <text class="note-modal-source">📄 {{fileName}}</text>
+    <textarea class="note-textarea" placeholder="引用原文（可选）" value="{{noteExcerpt}}" bindinput="onNoteInput" data-field="excerpt" maxlength="500"></textarea>
+    <textarea class="note-textarea" placeholder="写下你的批注..." value="{{noteAnnotation}}" bindinput="onNoteInput" data-field="annotation" maxlength="1000" auto-focus></textarea>
+    <button class="btn-save-note" bindtap="onSaveNote">保存笔记</button>
   </view>
 
   <!-- 空状态 -->
   <view wx:else class="empty-state">
     <text class="book-icon">📖</text>
     <text class="hint">选择一篇论文开始阅读</text>
-    <text class="sub-hint">上传后 AI 将自动生成摘要</text>
+    <text class="sub-hint">上传后点击角色标签生成摘要</text>
     <button class="select-btn" bindtap="onSelectFile">选择文件</button>
   </view>
 </view>

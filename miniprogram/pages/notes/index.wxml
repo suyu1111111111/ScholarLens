@@ -11,23 +11,19 @@
       data-tab="paper"
       bindtap="onSwitchTab"
     >按论文</view>
-    <view
-      class="tab-item {{currentTab === 'type' ? 'active' : ''}}"
-      data-tab="type"
-      bindtap="onSwitchTab"
-    >按类型</view>
   </view>
 
   <view class="search-bar">
     <text class="search-icon">🔍</text>
-    <input class="search-input" placeholder="搜索笔记" placeholder-class="search-placeholder" />
+    <input class="search-input" placeholder="搜索笔记" placeholder-class="search-placeholder" value="{{searchKeyword}}" bindinput="onSearchInput" />
   </view>
 
-  <view class="note-list" wx:if="{{notes.length}}">
-    <view class="note-card" wx:for="{{notes}}" wx:key="id">
+  <!-- 全部笔记 -->
+  <view class="note-list" wx:if="{{currentTab === 'all' && notes.length}}">
+    <view class="note-card" wx:for="{{notes}}" wx:key="id" data-id="{{item.id}}" bindlongpress="onNoteTap">
       <view class="note-color-bar" style="background-color: {{item.color}};"></view>
       <view class="note-body">
-        <text class="note-excerpt">{{item.excerpt}}</text>
+        <text class="note-excerpt" wx:if="{{item.excerpt}}">{{item.excerpt}}</text>
         <text class="note-annotation">{{item.annotation}}</text>
       </view>
       <view class="note-meta">
@@ -37,10 +33,32 @@
     </view>
   </view>
 
+  <!-- 按论文分组 -->
+  <view class="note-list" wx:elif="{{currentTab === 'paper' && groupedNotes.length}}">
+    <view wx:for="{{groupedNotes}}" wx:key="source" class="note-group">
+      <view class="group-header">
+        <view class="group-dot" style="background-color: {{item.color}};"></view>
+        <text class="group-title">{{item.source}}</text>
+        <text class="group-count">{{item.notes.length}} 条笔记</text>
+      </view>
+      <view class="note-card" wx:for="{{item.notes}}" wx:key="id" wx:for-item="note" data-id="{{note.id}}" bindlongpress="onNoteTap">
+        <view class="note-color-bar" style="background-color: {{note.color}};"></view>
+        <view class="note-body">
+          <text class="note-excerpt" wx:if="{{note.excerpt}}">{{note.excerpt}}</text>
+          <text class="note-annotation">{{note.annotation}}</text>
+        </view>
+        <view class="note-meta">
+          <text class="note-date">{{note.date}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
   <view class="empty-state" wx:else>
     <text class="empty-icon">✍️</text>
-    <text class="empty-text">暂无笔记</text>
-    <text class="empty-hint">去阅读页，划选文字即可创建笔记</text>
+    <text class="empty-text">{{searchKeyword ? '未找到匹配笔记' : '暂无笔记'}}</text>
+    <text class="empty-hint">{{searchKeyword ? '试试其他关键词' : '在阅读页点击写笔记即可创建'}}</text>
     <button class="go-read-btn" bindtap="onGoRead">前往阅读</button>
   </view>
 </view>

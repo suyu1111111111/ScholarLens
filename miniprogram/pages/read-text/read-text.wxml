@@ -1,0 +1,108 @@
+<view style="height:100%">
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
+    <text style="font-size:48px">📖</text>
+    <text style="color:#999;font-size:14px;margin-top:12px">正在加载...</text>
+  </view>
+
+  <!-- 错误 -->
+  <view wx:elif="{{error}}" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%">
+    <text style="width:48px;height:48px;line-height:48px;text-align:center;background:#e54545;color:#fff;border-radius:50%;font-size:24px;font-weight:bold">!</text>
+    <text style="color:#e54545;font-size:14px;max-width:80%;text-align:center;margin-top:12px">{{error}}</text>
+  </view>
+
+  <!-- 图片模式 -->
+  <view wx:elif="{{viewMode === 'image' && pageImages.length}}" style="height:100%;display:flex;flex-direction:column">
+    <view style="flex:1;overflow-y:auto;background:#333;position:relative" id="image-container">
+      <image
+        id="page-image"
+        src="{{pageImages[currentPage]}}"
+        mode="widthFix"
+        style="width:100%;display:block"
+        bindload="onImageLoad"
+      />
+      <canvas
+        type="2d"
+        id="anno-canvas"
+        style="position:absolute;top:0;left:0;width:100%;height:100%"
+        bindtouchstart="onAnnoTouchStart"
+        bindtouchmove="onAnnoTouchMove"
+        bindtouchend="onAnnoTouchEnd"
+        disable-scroll="{{true}}"
+      />
+    </view>
+    <!-- 批注工具栏 -->
+    <view style="background:#2c2c2c;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <text style="font-size:12px;color:#999;margin-right:4px">批注:</text>
+      <view wx:for="{{annoTools}}" wx:key="name" data-tool="{{item.name}}" bindtap="onAnnoToolChange"
+        style="padding:6px 12px;border-radius:14px;font-size:12px;{{annoTool === item.name ? 'background:#1a73e8;color:#fff' : 'background:#444;color:#ccc'}}">{{item.icon}} {{item.label}}</view>
+      <view wx:for="{{annoColors}}" wx:key="*this" data-color="{{item}}" bindtap="onAnnoColorChange"
+        style="width:22px;height:22px;border-radius:50%;background:{{item}};{{annoColor === item ? 'border:2px solid #fff;transform:scale(1.2)' : 'border:2px solid transparent'}}"></view>
+      <text wx:if="{{annoTool === 'none'}}" style="font-size:11px;color:#888">选择工具后开始标注</text>
+      <text wx:else style="font-size:11px;color:#aaa">在页面上{{annoTool === 'pen' ? '绘制' : annoTool === 'text' ? '点击' : '拖拽'}}标注</text>
+    </view>
+    <!-- 底部导航栏 -->
+    <view style="background:#fff;border-top:2px solid #1a73e8;padding:10px 16px;padding-bottom:calc(10px + env(safe-area-inset-bottom))">
+      <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:10px 12px;background:#f0f4ff;border-radius:8px">
+        <text style="font-size:15px;color:{{currentPage === 0 ? '#bbb' : '#1a73e8'}};padding:6px 12px;font-weight:bold" bindtap="onPrevPage">◀ 上一页</text>
+        <text style="font-size:14px;color:#333;font-weight:bold">{{currentPage + 1}}/{{totalPages}}</text>
+        <text style="font-size:15px;color:{{currentPage === totalPages - 1 ? '#bbb' : '#1a73e8'}};padding:6px 12px;font-weight:bold" bindtap="onNextPage">下一页 ▶</text>
+      </view>
+      <view style="display:flex;align-items:center;justify-content:space-between">
+        <text style="font-size:13px;color:#1a73e8" bindtap="onToggleView" wx:if="{{paragraphs.length}}">📝 文本模式</text>
+        <text style="font-size:13px;color:#1a73e8" bindtap="onToggleView" wx:else></text>
+        <text style="font-size:12px;color:#999">{{fileName}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 文本模式 -->
+  <view wx:else style="height:100%;background:#f5f5f5">
+    <scroll-view scroll-y enhanced show-scrollbar="{{false}}" style="height:100%;padding:0 16px 140px 16px">
+      <view style="padding-top:12px">
+        <view wx:for="{{pageParagraphs}}" wx:key="id"
+          style="position:relative;background:#fff;border-radius:8px;padding:14px 16px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.05)"
+          data-id="{{item.id}}" bindtap="onParagraphTap">
+          <text style="color:#222;display:block;font-size:{{fontSize}}px;line-height:{{fontSize+10}}px" user-select="{{true}}">{{item.text}}</text>
+          <view wx:if="{{annotations[item.id]}}" style="position:absolute;top:8px;right:8px;background:#1a73e8;color:#fff;font-size:11px;min-width:18px;height:18px;line-height:18px;border-radius:9px;text-align:center;padding:0 5px">
+            <text>{{annotations[item.id].length}}</text>
+          </view>
+          <view wx:if="{{annotations[item.id]}}" style="margin-top:10px;padding-top:8px;border-top:1px solid #eee">
+            <view wx:for="{{annotations[item.id]}}" wx:key="index" wx:for-item="a" style="padding:6px 10px;margin-bottom:6px;background:#f0f4ff;border-left:3px solid #1a73e8;border-radius:0 4px 4px 0">
+              <text style="font-size:13px;color:#333;display:block">{{a.content}}</text>
+              <text style="font-size:11px;color:#999;margin-top:2px;display:block">{{a.time}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+    <view style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:2px solid #1a73e8;padding:12px 16px;padding-bottom:calc(12px+env(safe-area-inset-bottom));z-index:50">
+      <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:10px 12px;background:#f0f4ff;border-radius:8px">
+        <text style="font-size:15px;color:{{currentPage===0?'#bbb':'#1a73e8'}};padding:6px 12px;font-weight:bold" bindtap="onPrevPage">◀ 上一页</text>
+        <text style="font-size:14px;color:#333;font-weight:bold">{{currentPage+1}}/{{totalPages}}</text>
+        <text style="font-size:15px;color:{{currentPage===totalPages-1?'#bbb':'#1a73e8'}};padding:6px 12px;font-weight:bold" bindtap="onNextPage">下一页 ▶</text>
+      </view>
+      <view style="display:flex;align-items:center;justify-content:space-between">
+        <view style="display:flex;align-items:center;gap:12px">
+          <text style="font-size:13px;color:#666">字号</text>
+          <view style="display:flex;gap:8px">
+            <view wx:for="{{fontSizes}}" wx:key="*this" style="padding:6px 14px;border-radius:16px;font-size:13px;{{fontSize===item?'background:#1a73e8;color:#fff':'background:#eee;color:#333'}}" data-size="{{item}}" bindtap="onFontSizeChange">{{item}}</view>
+          </view>
+        </view>
+        <text style="font-size:13px;color:#1a73e8" bindtap="onToggleView" wx:if="{{pageImages.length}}">🖼️ 图片模式</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 批注文字弹窗 -->
+  <view wx:if="{{showAnnoModal}}" style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:100" catchtap="onCloseAnnoModal"></view>
+  <view wx:if="{{showAnnoModal}}" style="position:fixed;bottom:0;left:0;right:0;z-index:101;background:#fff;border-radius:16px 16px 0 0;padding:20px 16px;padding-bottom:calc(20px+env(safe-area-inset-bottom))">
+    <view style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <text style="font-size:16px;font-weight:bold;color:#222">添加批注</text>
+      <text style="font-size:18px;color:#999;padding:4px" bindtap="onCloseAnnoModal">✕</text>
+    </view>
+    <text style="font-size:13px;color:#666;display:block;padding:10px;background:#f5f5f5;border-radius:6px;margin-bottom:12px;max-height:60px;overflow:hidden;line-height:1.4">{{activeParagraphText}}...</text>
+    <textarea style="width:100%;height:80px;font-size:14px;border:1px solid #ddd;border-radius:8px;padding:10px;margin-bottom:12px" placeholder="写下你的想法..." value="{{annoInput}}" bindinput="onAnnoInput" auto-focus maxlength="500"></textarea>
+    <button style="width:100%;background:#1a73e8;color:#fff;border:none;border-radius:8px;padding:12px;font-size:15px" bindtap="onSaveAnno">保存</button>
+  </view>
+</view>

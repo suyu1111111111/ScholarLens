@@ -6,12 +6,15 @@
       <text class="search-icon">🔍</text>
       <input
         class="search-input"
-        placeholder="搜索论文标题或笔记内容"
+        placeholder="{{searchMode === 'online' ? '搜索 Semantic Scholar 论文库...' : '搜索论文标题或笔记内容'}}"
         placeholder-class="search-placeholder"
         value="{{searchKeyword}}"
         bindinput="onSearchInput"
       />
-      <text class="filter-icon" bindtap="onToggleFilter">⫸</text>
+      <text class="search-mode-toggle" bindtap="onSearchModeSwitch">
+        {{searchMode === 'local' ? '本地' : '全网'}}
+      </text>
+      <text class="filter-icon" wx:if="{{searchMode === 'local'}}" bindtap="onToggleFilter">⫸</text>
     </view>
   </view>
 
@@ -85,9 +88,15 @@
     </view>
 
     <scroll-view class="card-scroll" scroll-x wx:if="{{filteredList.length}}">
-      <view class="card" wx:for="{{filteredList}}" wx:key="id">
-        <text class="card-title">{{item.title}}</text>
+      <view class="card" wx:for="{{filteredList}}" wx:key="id" data-id="{{item.id}}" data-fileid="{{item.fileID}}" bindtap="onCardTap">
+        <view class="card-top">
+          <text class="card-title">{{item.title}}</text>
+          <text class="card-fav" wx:if="{{item.isFavorite}}">⭐</text>
+        </view>
         <text class="card-date">{{item.date}}</text>
+        <view class="card-tags" wx:if="{{item.tags.length}}">
+          <text class="card-tag" wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this">{{tag}}</text>
+        </view>
         <view class="progress-bar">
           <view class="progress-fill" style="width: {{item.progress}}%;"></view>
         </view>
@@ -95,13 +104,37 @@
       </view>
     </scroll-view>
 
-    <view class="empty-state" wx:else>
+    <view class="empty-state" wx:elif="{{!loading}}">
       <view class="empty-illustration">
         <text class="empty-icon">{{searchKeyword ? '🔎' : '📚'}}</text>
         <text class="empty-shadow">▁▁▁▁▁</text>
       </view>
       <text class="empty-title">{{searchKeyword ? '未找到匹配结果' : '还没有阅读记录'}}</text>
       <text class="empty-hint">{{searchKeyword ? '试试其他关键词' : '上传一篇论文，开启你的阅读之旅'}}</text>
+    </view>
+  </view>
+
+  <!-- 在线搜索结果 -->
+  <view class="search-section" wx:if="{{searchMode === 'online'}}">
+    <view wx:if="{{searchingOnline}}" class="search-loading">
+      <text>搜索中...</text>
+    </view>
+    <view wx:elif="{{searchPapers.length}}">
+      <view class="section-header">
+        <text class="section-title">搜索结果</text>
+        <text class="section-count">{{searchPapers.length}} 篇</text>
+      </view>
+      <view class="search-result" wx:for="{{searchPapers}}" wx:key="id">
+        <text class="result-title">{{item.title}}</text>
+        <text class="result-meta">{{item.authors}}  {{item.year}}</text>
+        <text class="result-abstract" wx:if="{{item.abstract}}">{{item.abstract}}</text>
+        <button class="result-btn" wx:if="{{item.pdfUrl}}" data-url="{{item.pdfUrl}}" data-title="{{item.title}}" bindtap="onDownloadPaper">下载到我的论文</button>
+      </view>
+    </view>
+    <view class="empty-state" wx:elif="{{searchKeyword}}">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-title">未找到匹配论文</text>
+      <text class="empty-hint">试试其他关键词或英文搜索</text>
     </view>
   </view>
 </view>

@@ -1,7 +1,7 @@
 /**index.wxss**/
 
 .page {
-  padding: 40rpx 30rpx 0;
+  padding: 40rpx 30rpx calc(110rpx + env(safe-area-inset-bottom));
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -172,15 +172,41 @@
   margin-right: 0;
 }
 
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 8rpx;
+}
+
 .card-title {
-  display: block;
+  flex: 1;
   font-size: 28rpx;
   font-weight: 500;
   color: #333;
-  margin-bottom: 12rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.card-fav {
+  font-size: 28rpx;
+  flex-shrink: 0;
+  margin-left: 8rpx;
+}
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 8rpx;
+}
+
+.card-tag {
+  font-size: 18rpx;
+  color: #1a73e8;
+  background: #e8f0fe;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
 }
 
 .card-date {
@@ -244,3 +270,82 @@
   font-size: 24rpx;
   color: #ccc;
 }
+
+/* 搜索模式切换 */
+.search-mode-toggle {
+  font-size: 22rpx;
+  color: #2b2b4b;
+  background: #e8eaf0;
+  padding: 6rpx 16rpx;
+  border-radius: 16rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+
+/* 在线搜索结果 */
+.search-section {
+  margin-bottom: 40rpx;
+}
+
+.search-loading {
+  text-align: center;
+  padding: 40rpx;
+  color: #999;
+  font-size: 26rpx;
+}
+
+.section-count {
+  font-size: 24rpx;
+  color: #999;
+}
+
+.search-result {
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+
+.result-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2b2b4b;
+  line-height: 1.4;
+  margin-bottom: 8rpx;
+}
+
+.result-meta {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+  margin-bottom: 12rpx;
+}
+
+.result-abstract {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.result-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  padding: 0 28rpx;
+  font-size: 24rpx;
+  color: #2b2b4b;
+  background: #e8eaf0;
+  border-radius: 8rpx;
+  border: none;
+}
+
+.result-btn::after { border: none; }

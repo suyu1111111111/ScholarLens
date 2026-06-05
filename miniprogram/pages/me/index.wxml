@@ -15,17 +15,12 @@
   <view class="stats-row">
     <view class="stat-item">
       <text class="stat-num">{{stats.readCount}}</text>
-      <text class="stat-label">已读论文</text>
+      <text class="stat-label">论文数</text>
     </view>
     <view class="stat-divider"></view>
     <view class="stat-item">
       <text class="stat-num">{{stats.noteCount}}</text>
-      <text class="stat-label">笔记总数</text>
-    </view>
-    <view class="stat-divider"></view>
-    <view class="stat-item">
-      <text class="stat-num">{{stats.exportCount}}</text>
-      <text class="stat-label">导出次数</text>
+      <text class="stat-label">笔记数</text>
     </view>
   </view>
 
