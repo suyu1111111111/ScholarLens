@@ -12,7 +12,7 @@
         bindinput="onSearchInput"
       />
       <text class="search-mode-toggle" bindtap="onSearchModeSwitch">
-        {{searchMode === 'local' ? '本地' : '全网'}}
+        {{searchMode === 'local' ? '全网' : '本地'}}
       </text>
       <text class="filter-icon" wx:if="{{searchMode === 'local'}}" bindtap="onToggleFilter">⫸</text>
     </view>

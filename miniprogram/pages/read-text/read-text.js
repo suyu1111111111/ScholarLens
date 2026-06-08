@@ -76,8 +76,8 @@ Page({
       let initProgress = parseInt(options.progress) || 0;
       try {
         const cached = wx.getStorageSync('reading_progress') || {};
-        // 兼容旧编码 key 和新解码 key
-        const localPct = cached['progress_' + decodedFileID] || cached['progress_' + options.fileID] || 0;
+      // 兼容旧编码 key 和新编码 key
+      const localPct = cached['progress_' + encodeURIComponent(decodedFileID)] || cached['progress_' + decodedFileID] || 0;
         if (localPct > initProgress) initProgress = localPct;
       } catch (e) {}
       const targetPage = parseInt(options.page);
@@ -122,13 +122,12 @@ Page({
       }
       // 同步写本地存储，确保不丢
       try {
-        const key = 'progress_' + this.data.fileID;
+        const key = 'progress_' + encodeURIComponent(this.data.fileID);
         const cached = wx.getStorageSync('reading_progress') || {};
         cached[key] = Math.max(pct, (cached[key] || 0));
         wx.setStorageSync('reading_progress', cached);
       } catch (e) {}
       // 异步写云端
-      wx.cloud.callFunction({
         name: 'pdfSummary',
         data: {
           action: 'updateProgress',
@@ -495,7 +494,7 @@ Page({
         annoData: annoData,
       },
       success: () => {
-        that._loadAllAnnotations();
+        that._redrawAnnotations();
       },
     });
   },
@@ -552,11 +551,10 @@ Page({
 
     // 本地存储兜底
     try {
-      const key = 'progress_' + this.data.fileID;
+      const key = 'progress_' + encodeURIComponent(this.data.fileID);
       const cached = wx.getStorageSync('reading_progress') || {};
       cached[key] = Math.max(pct, (cached[key] || 0));
       wx.setStorageSync('reading_progress', cached);
-      console.log('[进度] 本地保存成功: key=', key, 'pct=', pct);
     } catch (e) {
       console.error('[进度] 本地保存失败:', e);
     }
@@ -765,7 +763,6 @@ Page({
         wx.showToast({ title: '已保存', icon: 'success' });
         that.setData({ showAnnoModal: false });
         that.loadAnnotations();
-        that._loadAllAnnotations();
       },
       fail: () => { wx.showToast({ title: '保存失败', icon: 'none' }); },
     });

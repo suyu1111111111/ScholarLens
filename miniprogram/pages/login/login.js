@@ -1,6 +1,6 @@
 Page({
   data: {
-    status: 'idle', // idle | authorizing | entering
+    nickname: '',
   },
 
   onLoad() {
@@ -10,33 +10,18 @@ Page({
     }
   },
 
-  onLogin() {
-    if (this.data.status !== 'idle') return;
-    this.setData({ status: 'authorizing' });
+  onNickInput(e) {
+    this.setData({ nickname: e.detail.value.trim() });
+  },
 
-    wx.getUserProfile({
-      desc: '用于展示用户昵称和头像',
-      success: (res) => {
-        const userInfo = res.userInfo;
-        wx.setStorageSync('userInfo', userInfo);
-        wx.setStorageSync('isLoggedIn', true);
-        const app = getApp();
-        app.globalData.userInfo = userInfo;
-        app.globalData.isLoggedIn = true;
-
-        this.setData({ status: 'entering' });
-        setTimeout(() => {
-          wx.switchTab({ url: '/pages/index/index' });
-        }, 400);
-      },
-      fail: () => {
-        wx.setStorageSync('isLoggedIn', true);
-
-        this.setData({ status: 'entering' });
-        setTimeout(() => {
-          wx.switchTab({ url: '/pages/index/index' });
-        }, 400);
-      },
-    });
+  onEnter() {
+    const nickname = this.data.nickname || '学者';
+    const userInfo = { nickName: nickname, avatarUrl: '' };
+    wx.setStorageSync('userInfo', userInfo);
+    wx.setStorageSync('isLoggedIn', true);
+    const app = getApp();
+    app.globalData.userInfo = userInfo;
+    app.globalData.isLoggedIn = true;
+    wx.switchTab({ url: '/pages/index/index' });
   },
 });

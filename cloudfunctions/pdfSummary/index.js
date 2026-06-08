@@ -330,7 +330,7 @@ async function updateDocPaperInfo(fileID, userId, fields) {
         data: { paperInfo: info, updatedAt: info.updatedAt },
       });
     }
-  } catch (e) { /* 非关键路径，静默失败 */ }
+  } catch (e) { console.error('[updateDocPaperInfo] 更新失败:', e.message); }
 }
 
 // ========== 主入口 ==========
@@ -514,12 +514,32 @@ exports.main = async (event, context) => {
       if (page !== undefined) note.page = page;
       if (annoType) note.annoType = annoType;
       if (annoData) note.annoData = annoData;
-      const notes = doc.notes || [];
-      notes.unshift(note);
       await db.collection('documents').doc(doc._id).update({
-        data: { notes, updatedAt: now },
+        data: { notes: db.command.push([note]), updatedAt: now },
       });
       return { success: true, noteId: note.id };
+    } catch (err) {
+      return { success: false, errMsg: err.message };
+    }
+  }
+
+  if (action === 'noteDelete') {
+    const wxContext = cloud.getWXContext();
+    const { noteId, fileID } = event;
+    if (!noteId || !fileID) return { success: false, errMsg: '缺少参数' };
+    try {
+      const existQuery = await db.collection('documents')
+        .where({ fileID: fileID, userId: wxContext.OPENID })
+        .get();
+      if (existQuery.data.length === 0) {
+        return { success: false, errMsg: '关联论文不存在' };
+      }
+      const doc = existQuery.data[0];
+      const notes = (doc.notes || []).filter(n => n.id !== noteId);
+      await db.collection('documents').doc(doc._id).update({
+        data: { notes, updatedAt: new Date().toISOString() },
+      });
+      return { success: true };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }

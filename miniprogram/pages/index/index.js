@@ -1,3 +1,5 @@
+const { formatDate } = require('../../utils/format');
+
 Page({
   data: {
     searchKeyword: '',
@@ -49,13 +51,13 @@ Page({
             id: doc._id,
             fileID: doc.fileID,
             title: doc.fileName || '未命名论文',
-            date: that.formatDate(doc.createdAt),
+            date: formatDate(doc.createdAt),
             progress: (() => {
                 const cloudPct = (doc.paperInfo && doc.paperInfo.progress != null) ? doc.paperInfo.progress : 0;
                 try {
                   const cached = wx.getStorageSync('reading_progress') || {};
-                  const localPct = cached['progress_' + doc.fileID]
-                    || cached['progress_' + encodeURIComponent(doc.fileID)]
+                  const localPct = cached['progress_' + encodeURIComponent(doc.fileID)]
+                    || cached['progress_' + doc.fileID]
                     || 0;
                   return Math.max(cloudPct, localPct);
                 } catch (e) { return cloudPct; }
@@ -76,19 +78,6 @@ Page({
         that.setData({ loading: false, emptyType: 'noRecord' });
       },
     });
-  },
-
-  formatDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now - d;
-    if (diff < 86400000) return '今天';
-    if (diff < 2 * 86400000) return '昨天';
-    if (diff < 7 * 86400000) return Math.floor(diff / 86400000) + '天前';
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return m + '月' + day + '日';
   },
 
   onSearchInput(e) {
@@ -225,6 +214,7 @@ Page({
     const that = this;
     const total = files.length;
     let done = 0;
+    let failed = 0;
     const results = [];
 
     wx.showLoading({ title: '上传中 0/' + total });
@@ -232,7 +222,11 @@ Page({
     function uploadNext(i) {
       if (i >= total) {
         wx.hideLoading();
-        wx.showToast({ title: '已上传 ' + total + ' 篇论文', icon: 'success' });
+        if (failed > 0) {
+          wx.showToast({ title: '成功 ' + results.length + ' 篇，失败 ' + failed + ' 篇', icon: 'none', duration: 3000 });
+        } else {
+          wx.showToast({ title: '已上传 ' + total + ' 篇论文', icon: 'success' });
+        }
         const app = getApp();
         app.globalData.pendingFile = {
           filePath: results[0].fileID,
@@ -255,6 +249,7 @@ Page({
         },
         fail: () => {
           done++;
+          failed++;
           wx.showLoading({ title: '上传中 ' + done + '/' + total });
           uploadNext(i + 1);
         },

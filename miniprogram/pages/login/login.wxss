@@ -60,7 +60,7 @@
 
 .dot-row {
   display: flex;
-  gap: 40rpx;
+  margin: 10rpx 0;
 }
 
 .dot {
@@ -68,7 +68,7 @@
   height: 6rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.15);
-  margin: 20rpx 0;
+  margin: 0 20rpx;
 }
 
 /* ===== 品牌区 ===== */
@@ -131,38 +131,56 @@
   z-index: 1;
 }
 
-.login-btn {
+.nickname-input-wrap {
+  width: 520rpx;
+  height: 100rpx;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 50rpx;
+  display: flex;
+  align-items: center;
+  padding: 0 40rpx;
+  box-sizing: border-box;
+  border: 2rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.nickname-input {
+  width: 100%;
+  height: 100%;
+  font-size: 30rpx;
+  color: #fff;
+  text-align: center;
+}
+
+.nickname-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.enter-btn {
   width: 520rpx;
   height: 100rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
   background: rgba(255, 255, 255, 0.95);
-  color: #2b2b4b;
-  font-size: 32rpx;
-  font-weight: 600;
   border-radius: 50rpx;
   border: none;
+  margin-top: 24rpx;
   box-shadow: 0 8rpx 30rpx rgba(0, 0, 0, 0.3);
-  transition: all 0.2s;
 }
 
-.login-btn:active {
+.enter-btn:active {
   transform: scale(0.97);
   opacity: 0.9;
 }
 
-.login-btn::after {
+.enter-btn::after {
   border: none;
 }
 
-.wx-icon {
-  font-size: 36rpx;
-  color: #07c160;
-}
-
-.login-text {
+.enter-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #2b2b4b;
   letter-spacing: 2rpx;
 }
 
@@ -187,8 +205,20 @@
 /* 加载动画点 */
 .loading-dots {
   display: flex;
-  gap: 16rpx;
   margin-bottom: 40rpx;
+}
+
+.loading-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  animation: pulse 1.2s ease-in-out infinite;
+  margin-right: 16rpx;
+}
+
+.loading-dot:last-child {
+  margin-right: 0;
 }
 
 .loading-dot {

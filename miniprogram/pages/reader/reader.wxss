@@ -52,8 +52,15 @@
 
 .dot-pulse {
   display: flex;
-  gap: 12rpx;
   margin-top: 40rpx;
+}
+
+.dot-pulse .dot {
+  margin-right: 12rpx;
+}
+
+.dot-pulse .dot:last-child {
+  margin-right: 0;
 }
 
 .dot {

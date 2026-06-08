@@ -1,3 +1,5 @@
+const { formatDate } = require('../../utils/format');
+
 Page({
   data: {
     searchKeyword: '',
@@ -25,7 +27,7 @@ Page({
             fileID: n.fileID,
             excerpt: n.excerpt || '',
             annotation: n.annotation || '',
-            date: that.formatDate(n.createdAt),
+            date: formatDate(n.createdAt),
             source: n.fileName || '未命名',
             color: n.color || '#1a73e8',
             type: n.type || 'note',
@@ -43,17 +45,6 @@ Page({
         that.setData({ notes: [], loading: false });
       },
     });
-  },
-
-  formatDate(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now - d;
-    if (diff < 86400000) return '今天';
-    if (diff < 7 * 86400000) return Math.ceil(diff / 86400000) + '天前';
-    const m = d.getMonth() + 1;
-    return m + '月' + d.getDate() + '日';
   },
 
   onSearchInput(e) {

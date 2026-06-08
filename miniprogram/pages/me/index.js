@@ -27,14 +27,13 @@ Page({
     // 查论文数
     wx.cloud.callFunction({
       name: 'pdfSummary',
-      data: { action: 'list' },
+      data: { action: 'list', limit: 999 },
       success: (res) => {
         const count = (res.result && res.result.list) ? res.result.list.length : 0;
-        that.setData({ 'stats.readCount': count, 'stats._readDone': true });
+        that.setData({ 'stats.readCount': count });
       },
-      fail: () => { that.setData({ 'stats._readDone': true }); },
+      fail: () => {},
     });
-    // 查笔记数
     wx.cloud.callFunction({
       name: 'pdfSummary',
       data: { action: 'noteList' },
@@ -42,6 +41,7 @@ Page({
         const count = (res.result && res.result.list) ? res.result.list.length : 0;
         that.setData({ 'stats.noteCount': count });
       },
+      fail: () => {},
     });
   },
 
