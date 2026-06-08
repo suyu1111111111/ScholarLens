@@ -151,25 +151,11 @@
   color: #999;
 }
 
-/* 横向滚动卡片 */
-.card-scroll {
-  white-space: nowrap;
-}
-
 .card {
-  display: inline-block;
-  width: 280rpx;
-  padding: 28rpx;
-  margin-right: 20rpx;
+  padding: 20rpx;
   background-color: #fff;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  vertical-align: top;
-  white-space: normal;
-}
-
-.card:last-child {
-  margin-right: 0;
 }
 
 .card-top {
@@ -229,9 +215,41 @@
   border-radius: 3rpx;
 }
 
+.card-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .card-progress-text {
   font-size: 20rpx;
   color: #aaa;
+}
+
+.card-mastery-text {
+  font-size: 20rpx;
+  color: #1a73e8;
+  font-weight: 500;
+}
+
+/* 查看全部：竖直网格 */
+.card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  padding-bottom: 20rpx;
+}
+
+.card-grid .card {
+  width: calc(50% - 10rpx);
+  margin: 0 0 20rpx 0;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.card-grid .card:last-child {
+  margin-right: 0;
 }
 
 /* 空状态 */

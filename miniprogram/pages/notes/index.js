@@ -1,6 +1,5 @@
 Page({
   data: {
-    currentTab: 'all',
     searchKeyword: '',
     notes: [],
     groupedNotes: [],
@@ -24,15 +23,18 @@ Page({
           const notes = (res.result.list || []).map((n) => ({
             id: n._id,
             fileID: n.fileID,
-            excerpt: n.excerpt,
-            annotation: n.annotation,
+            excerpt: n.excerpt || '',
+            annotation: n.annotation || '',
             date: that.formatDate(n.createdAt),
             source: n.fileName || '未命名',
             color: n.color || '#1a73e8',
+            type: n.type || 'note',
+            page: n.page,
             createdAt: n.createdAt,
           }));
-          that.setData({ notes, loading: false });
-          that.applyFilter();
+          that.setData({ notes: notes, loading: false }, () => {
+            that.applyFilter();
+          });
         } else {
           that.setData({ notes: [], loading: false });
         }
@@ -54,30 +56,13 @@ Page({
     return m + '月' + d.getDate() + '日';
   },
 
-  onSwitchTab(e) {
-    const tab = e.currentTarget.dataset.tab;
-    this.setData({ currentTab: tab });
-    this.applyFilter();
-  },
-
   onSearchInput(e) {
     this.setData({ searchKeyword: e.detail.value.trim() });
     this.applyFilter();
   },
 
   applyFilter() {
-    let { notes, currentTab, searchKeyword } = this.data;
-
-    if (currentTab === 'paper') {
-      const map = {};
-      notes.forEach((n) => {
-        const key = n.source;
-        if (!map[key]) map[key] = { source: key, notes: [], color: n.color };
-        map[key].notes.push(n);
-      });
-      this.setData({ groupedNotes: Object.values(map) });
-      return;
-    }
+    let { notes, searchKeyword } = this.data;
 
     if (searchKeyword) {
       const kw = searchKeyword.toLowerCase();
@@ -89,25 +74,69 @@ Page({
       );
     }
 
-    this.setData({ notes: notes, groupedNotes: [] });
+    // 按论文分组，每篇论文一条记录
+    const map = {};
+    notes.forEach((n) => {
+      const key = n.source;
+      if (!map[key]) {
+        map[key] = {
+          source: key,
+          fileID: n.fileID,
+          notes: [],
+          hasNote: false,
+          hasAnnotate: false,
+          expanded: false,
+        };
+      }
+      map[key].notes.push(n);
+      if (n.type === 'annotate') map[key].hasAnnotate = true;
+      if (n.type === 'note') map[key].hasNote = true;
+    });
+    this.setData({ groupedNotes: Object.values(map) });
   },
 
-  onNoteTap(e) {
-    const { id } = e.currentTarget.dataset;
-    wx.showActionSheet({
-      itemList: ['删除笔记'],
-      itemColor: '#e54545',
+  onTogglePaper(e) {
+    const source = e.currentTarget.dataset.source;
+    const grouped = this.data.groupedNotes.map((g) => {
+      if (g.source === source) g.expanded = !g.expanded;
+      return g;
+    });
+    this.setData({ groupedNotes: grouped });
+  },
+
+  onNoteNavigate(e) {
+    const { fileid, page, source, type: noteType } = e.currentTarget.dataset;
+    if (!fileid) return;
+    const app = getApp();
+    app.globalData.openFileID = fileid;
+    // 只有批注类型才有有效页码，普通笔记不跳转到特定页
+    if (noteType === 'annotate') {
+      const pageNum = parseInt(page);
+      app.globalData.targetNotePage = isNaN(pageNum) ? -1 : pageNum;
+    } else {
+      app.globalData.targetNotePage = -1;
+    }
+    wx.switchTab({ url: '/pages/reader/reader' });
+  },
+
+  onDeleteNote(e) {
+    const { id, fileid } = e.currentTarget.dataset;
+    const that = this;
+    wx.showModal({
+      title: '删除笔记',
+      content: '确定删除这条笔记？',
+      confirmColor: '#e54545',
       success: (res) => {
-        if (res.tapIndex === 0) this.deleteNote(id);
+        if (res.confirm) that.deleteNote(id, fileid);
       },
     });
   },
 
-  deleteNote(noteId) {
+  deleteNote(noteId, fileID) {
     const that = this;
     wx.cloud.callFunction({
       name: 'pdfSummary',
-      data: { action: 'noteDelete', noteId: noteId },
+      data: { action: 'noteDelete', noteId: noteId, fileID: fileID },
       success: () => {
         wx.showToast({ title: '已删除', icon: 'none' });
         that.fetchNotes();

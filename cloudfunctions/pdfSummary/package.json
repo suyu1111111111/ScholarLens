@@ -1,11 +1,11 @@
 {
-  "name": "pdfSummary",
+  "name": "getSummary",
   "version": "1.0.0",
   "description": "Extract PDF text and generate AI summary",
   "main": "index.js",
   "dependencies": {
     "wx-server-sdk": "~2.4.0",
     "pdf-parse": "^1.1.1",
-    "sharp": "^0.33.0"
+    "mupdf": "^1.3.0"
   }
 }

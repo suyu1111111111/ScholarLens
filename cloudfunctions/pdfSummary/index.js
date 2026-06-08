@@ -1,5 +1,5 @@
 const cloud = require('wx-server-sdk');
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'cloud1-d7gomttv5c8fdacc9' });
 
 const db = cloud.database();
 
@@ -205,10 +205,11 @@ async function saveToDb(userId, existQuery, fileID, fileName, role, summary, pag
     const doc = existQuery.data[0];
     const summaries = doc.summaries || {};
     summaries[role] = { text: summary, generatedAt: now };
+    const existingInfo = doc.paperInfo || {};
     await db.collection('documents').doc(doc._id).update({
       data: {
         summaries,
-        paperInfo: { pageCount, textLength, updatedAt: now },
+        paperInfo: { ...existingInfo, pageCount, textLength, updatedAt: now },
         updatedAt: now,
       },
     });
@@ -287,6 +288,51 @@ async function ensureCollection(name) {
   }
 }
 
+// ========== 数据丰富度评分（用于去重时保留最佳记录） ==========
+function dataRichScore(doc) {
+  let score = 0;
+  const info = doc.paperInfo || {};
+  score += (info.progress || 0) * 0.5;
+  score += Object.keys(doc.summaries || {}).length * 15;
+  score += info.hasMindmap ? 5 : 0;
+  score += Math.min((doc.notes || []).length, 5) * 1;
+  if (doc.fileID) score += 10;
+  return score;
+}
+
+// ========== 掌握度计算 ==========
+function computeMastery(doc) {
+  const info = doc.paperInfo || {};
+  const pageProgress = info.progress || 0;
+  const summariesCount = doc.summaries ? Object.keys(doc.summaries).length : 0;
+  const hasMindmap = info.hasMindmap || false;
+  const noteCount = (doc.notes || []).length;
+
+  const score = Math.round(
+    pageProgress * 0.5 +
+    summariesCount * 15 +
+    (hasMindmap ? 5 : 0) +
+    Math.min(noteCount, 5) * 1
+  );
+  return Math.min(100, score);
+}
+
+async function updateDocPaperInfo(fileID, userId, fields) {
+  try {
+    const query = await db.collection('documents')
+      .where({ fileID, userId }).get();
+    if (query.data.length > 0) {
+      const doc = query.data[0];
+      const info = doc.paperInfo || {};
+      Object.assign(info, fields);
+      info.updatedAt = new Date().toISOString();
+      await db.collection('documents').doc(doc._id).update({
+        data: { paperInfo: info, updatedAt: info.updatedAt },
+      });
+    }
+  } catch (e) { /* 非关键路径，静默失败 */ }
+}
+
 // ========== 主入口 ==========
 exports.main = async (event, context) => {
   const { action, fileID, fileName, role } = event;
@@ -317,6 +363,7 @@ exports.main = async (event, context) => {
             success: true,
             summary: doc.summaries[targetRole],
             paperInfo: doc.paperInfo || {},
+            mastery: computeMastery(doc),
             cached: true,
           };
         }
@@ -338,10 +385,14 @@ exports.main = async (event, context) => {
                 '以下是从扫描版 PDF 中 OCR 识别的文本，可能存在少量识别错误，请尽力生成摘要：\n\n' + ocrText.substring(0, 6000));
               const now = new Date().toISOString();
               await saveToDb(userId, existQuery, fileID, fileName, targetRole, summary, pageCount, textLength, now);
+              const updatedQuery = await db.collection('documents')
+                .where({ fileID, userId }).get();
+              const mastery = updatedQuery.data.length > 0 ? computeMastery(updatedQuery.data[0]) : 0;
               return {
                 success: true,
                 summary: { text: summary, generatedAt: now },
                 paperInfo: { pageCount, textLength },
+                mastery,
                 cached: false,
                 ocrUsed: true,
               };
@@ -363,11 +414,15 @@ exports.main = async (event, context) => {
 
       // 4. 存储到数据库
       await saveToDb(userId, existQuery, fileID, fileName, targetRole, summary, pageCount, textLength, now);
+      const updatedQuery = await db.collection('documents')
+        .where({ fileID, userId }).get();
+      const mastery = updatedQuery.data.length > 0 ? computeMastery(updatedQuery.data[0]) : 0;
 
       return {
         success: true,
         summary: { text: summary, generatedAt: now },
         paperInfo: { pageCount, textLength },
+        mastery,
         cached: false,
       };
     } catch (err) {
@@ -387,16 +442,20 @@ exports.main = async (event, context) => {
 
       if (query.data.length > 0) {
         const doc = query.data[0];
+        const rawNotes = doc.notes || [];
+        const noteTypes = [...new Set(rawNotes.map(n => n.type || 'note'))];
         return {
           success: true,
           summaries: doc.summaries || {},
           paperInfo: doc.paperInfo || {},
+          mastery: computeMastery(doc),
           tags: doc.tags || [],
           isFavorite: doc.isFavorite || false,
           fileName: doc.fileName,
+          noteTypes: noteTypes,
         };
       }
-      return { success: true, summaries: {}, paperInfo: {} };
+      return { success: true, summaries: {}, paperInfo: {}, mastery: 0, noteTypes: [] };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }
@@ -404,41 +463,63 @@ exports.main = async (event, context) => {
 
   if (action === 'list') {
     const wxContext = cloud.getWXContext();
+    const { limit } = event;
     try {
       await ensureCollection('documents');
       const query = await db.collection('documents')
         .where({ userId: wxContext.OPENID })
         .orderBy('updatedAt', 'desc')
-        .limit(20)
         .get();
-
-      return { success: true, list: query.data };
+      // 按文件名去重，保留最新更新的记录
+      const seen = new Map();
+      const deduped = [];
+      for (const doc of query.data) {
+        const key = (doc.fileName || '').trim().toLowerCase();
+        if (!key) {
+          deduped.push(doc); // 无文件名的不去重，保留以便排查
+        } else if (!seen.has(key)) {
+          seen.set(key, true);
+          deduped.push(doc);
+        }
+      }
+      const sliced = limit ? deduped.slice(0, limit) : deduped;
+      const list = sliced.map(doc => ({ ...doc, mastery: computeMastery(doc) }));
+      return { success: true, list };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }
   }
 
-  // ========== 笔记操作 ==========
+  // ========== 笔记操作（存在论文文档内） ==========
   if (action === 'noteAdd') {
     const wxContext = cloud.getWXContext();
-    const { fileID, fileName, excerpt, annotation, color, page, annoType, annoData } = event;
+    const { fileID, fileName, excerpt, annotation, color, page, annoType, annoData, type } = event;
     try {
-      await ensureCollection('notes');
+      const existQuery = await db.collection('documents')
+        .where({ fileID: fileID, userId: wxContext.OPENID })
+        .get();
+      if (existQuery.data.length === 0) {
+        return { success: false, errMsg: '关联论文不存在' };
+      }
+      const doc = existQuery.data[0];
       const now = new Date().toISOString();
-      const doc = {
-        userId: wxContext.OPENID,
-        fileID: fileID || '',
-        fileName: fileName || '',
+      const note = {
+        id: 'n' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
         excerpt: excerpt || '',
         annotation: annotation || '',
         color: color || '#1a73e8',
+        type: type || 'note',
         createdAt: now,
       };
-      if (page !== undefined) doc.page = page;
-      if (annoType) doc.annoType = annoType;
-      if (annoData) doc.annoData = annoData;
-      const res = await db.collection('notes').add({ data: doc });
-      return { success: true, noteId: res._id };
+      if (page !== undefined) note.page = page;
+      if (annoType) note.annoType = annoType;
+      if (annoData) note.annoData = annoData;
+      const notes = doc.notes || [];
+      notes.unshift(note);
+      await db.collection('documents').doc(doc._id).update({
+        data: { notes, updatedAt: now },
+      });
+      return { success: true, noteId: note.id };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }
@@ -448,15 +529,37 @@ exports.main = async (event, context) => {
     const wxContext = cloud.getWXContext();
     const { filterFileID } = event;
     try {
-      await ensureCollection('notes');
+      await ensureCollection('documents');
       const where = { userId: wxContext.OPENID };
       if (filterFileID) where.fileID = filterFileID;
-      const query = await db.collection('notes')
+      const query = await db.collection('documents')
         .where(where)
-        .orderBy('createdAt', 'desc')
-        .limit(50)
+        .orderBy('updatedAt', 'desc')
+        .limit(100)
         .get();
-      return { success: true, list: query.data };
+      // 提取所有笔记，附带论文信息
+      const allNotes = [];
+      for (const doc of query.data) {
+        const notes = doc.notes || [];
+        for (const note of notes) {
+          allNotes.push({
+            _id: note.id,
+            fileID: doc.fileID,
+            fileName: doc.fileName || '未命名',
+            excerpt: note.excerpt,
+            annotation: note.annotation,
+            color: note.color || '#1a73e8',
+            type: note.type || 'note',
+            createdAt: note.createdAt,
+            page: note.page,
+            annoType: note.annoType,
+            annoData: note.annoData,
+          });
+        }
+      }
+      // 按创建时间倒序
+      allNotes.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+      return { success: true, list: allNotes };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }
@@ -495,13 +598,77 @@ exports.main = async (event, context) => {
       if (existQuery.data.length === 0) {
         return { success: false, errMsg: '文档不存在' };
       }
-      // 删除数据库记录
+      // 删除数据库记录（笔记存在论文内，随论文删除）
       await db.collection('documents').doc(existQuery.data[0]._id).remove();
       // 删除云存储文件
       try { await cloud.deleteFile({ fileList: [fileID] }); } catch (e) {}
-      // 删除关联笔记
-      try { await db.collection('notes').where({ fileID: fileID }).remove(); } catch (e) {}
       return { success: true };
+    } catch (err) {
+      return { success: false, errMsg: err.message };
+    }
+  }
+
+  if (action === 'cleanupDrafts') {
+    const wxContext = cloud.getWXContext();
+    try {
+      await ensureCollection('documents');
+      const query = await db.collection('documents')
+        .where({ userId: wxContext.OPENID })
+        .get();
+      // 删掉没有 fileName 或 summaries 为空的残废记录
+      const toDelete = query.data.filter(doc => {
+        const noName = !doc.fileName || doc.fileName.trim() === '';
+        const noSummary = !doc.summaries || Object.keys(doc.summaries).length === 0;
+        return noName || noSummary;
+      });
+      for (const doc of toDelete) {
+        await db.collection('documents').doc(doc._id).remove();
+      }
+      return { success: true, deleted: toDelete.length };
+    } catch (err) {
+      return { success: false, errMsg: err.message };
+    }
+  }
+
+  if (action === 'dedupFiles') {
+    const wxContext = cloud.getWXContext();
+    try {
+      await ensureCollection('documents');
+      const query = await db.collection('documents')
+        .where({ userId: wxContext.OPENID })
+        .get();
+      // 按文件名分组
+      const groups = {};
+      for (const doc of query.data) {
+        const key = (doc.fileName || '').trim().toLowerCase();
+        if (!key) continue; // 无名记录留给 cleanupDrafts 处理
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(doc);
+      }
+      // 对每组按数据丰富度排序，保留第一条，删其余
+      let deleted = 0;
+      for (const [key, docs] of Object.entries(groups)) {
+        if (docs.length <= 1) continue;
+        docs.sort((a, b) => {
+          const scoreA = dataRichScore(a);
+          const scoreB = dataRichScore(b);
+          return scoreB - scoreA; // 降序，分数高的排前面
+        });
+        // 保留第一个，删除其余
+        for (let i = 1; i < docs.length; i++) {
+          try {
+            // 删除云存储文件（如果 fileID 不同）
+            if (docs[i].fileID !== docs[0].fileID) {
+              try { await cloud.deleteFile({ fileList: [docs[i].fileID] }); } catch (e) {}
+            }
+            await db.collection('documents').doc(docs[i]._id).remove();
+            deleted++;
+          } catch (e) {
+            console.error('删除重复记录失败:', docs[i]._id, e.message);
+          }
+        }
+      }
+      return { success: true, deleted };
     } catch (err) {
       return { success: false, errMsg: err.message };
     }
@@ -511,17 +678,21 @@ exports.main = async (event, context) => {
     const wxContext = cloud.getWXContext();
     const { fileID, progress } = event;
     try {
+      await ensureCollection('documents');
       const existQuery = await db.collection('documents')
         .where({ fileID: fileID, userId: wxContext.OPENID })
         .get();
+      const now = new Date().toISOString();
       if (existQuery.data.length > 0) {
         const doc = existQuery.data[0];
         const info = doc.paperInfo || {};
         info.progress = progress;
         await db.collection('documents').doc(doc._id).update({
-          data: { paperInfo: info, updatedAt: new Date().toISOString() },
+          data: { paperInfo: info, updatedAt: now },
         });
       }
+      // 文档不在数据库则跳过（不凭空创建不完整记录），
+      // 客户端已有 wx.setStorageSync 本地兜底
       return { success: true };
     } catch (err) {
       return { success: false, errMsg: err.message };
@@ -529,9 +700,19 @@ exports.main = async (event, context) => {
   }
 
   if (action === 'noteDelete') {
-    const { noteId } = event;
+    const wxContext = cloud.getWXContext();
+    const { noteId, fileID } = event;
     try {
-      await db.collection('notes').doc(noteId).remove();
+      if (!fileID) return { success: false, errMsg: '缺少关联论文 ID' };
+      const existQuery = await db.collection('documents')
+        .where({ fileID: fileID, userId: wxContext.OPENID })
+        .get();
+      if (existQuery.data.length === 0) return { success: false, errMsg: '论文不存在' };
+      const doc = existQuery.data[0];
+      const notes = (doc.notes || []).filter(n => n.id !== noteId);
+      await db.collection('documents').doc(doc._id).update({
+        data: { notes, updatedAt: new Date().toISOString() },
+      });
       return { success: true };
     } catch (err) {
       return { success: false, errMsg: err.message };
@@ -555,7 +736,8 @@ exports.main = async (event, context) => {
   }
 
   if (action === 'mindmap') {
-    const { summaryText } = event;
+    const wxContext = cloud.getWXContext();
+    const { summaryText, fileID } = event;
     if (!summaryText || !summaryText.trim()) {
       return { success: false, errMsg: '缺少摘要内容' };
     }
@@ -565,6 +747,10 @@ exports.main = async (event, context) => {
         summaryText.trim()
       );
       const tree = parseMindmapTree(treeText);
+      // 标记已生成导图
+      if (fileID) {
+        await updateDocPaperInfo(fileID, wxContext.OPENID, { hasMindmap: true });
+      }
       return { success: true, tree: tree };
     } catch (err) {
       return { success: false, errMsg: err.message };
@@ -641,34 +827,77 @@ exports.main = async (event, context) => {
   }
 
   if (action === 'getPages') {
-    const { fileID, pdfBase64 } = event;
-    if (!fileID && !pdfBase64) return { success: false, errMsg: '缺少文件参数' };
+    const { fileID, pdfBase64, tempFileURL } = event;
+    if (!fileID && !pdfBase64 && !tempFileURL) return { success: false, errMsg: '缺少文件参数' };
     try {
       let pdfBuffer;
       if (pdfBase64) {
         pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      } else if (tempFileURL) {
+        pdfBuffer = await httpsDownload(tempFileURL);
       } else {
         pdfBuffer = await downloadFromFileID(fileID);
       }
       // 先获取页数
       const pageInfo = await extractPdfTextFromBuffer(pdfBuffer);
       const pageCount = pageInfo.pageCount || 1;
-      // 用 sharp 逐页渲染为图片
-      const sharp = require('sharp');
-      const pages = [];
-      const maxPages = Math.min(pageCount, 50); // 限制最多50页
-      for (let p = 0; p < maxPages; p++) {
-        try {
-          const imgBuffer = await sharp(pdfBuffer, { page: p, density: 300 })
-            .png({ compressionLevel: 3 })
-            .toBuffer();
-          pages.push('data:image/png;base64,' + imgBuffer.toString('base64'));
-        } catch (e) {
-          console.error('渲染第' + (p + 1) + '页失败:', e.message);
-          break;
-        }
+      // 只返回页数，不渲染（避免 base64 总大小超 6MB 限制）
+      return { success: true, pages: [], pageCount: pageCount };
+    } catch (err) {
+      return { success: false, errMsg: err.message };
+    }
+  }
+
+  if (action === 'getPage') {
+    const { fileID, pdfBase64, tempFileURL, page } = event;
+    if ((!fileID && !pdfBase64 && !tempFileURL) || page === undefined) {
+      return { success: false, errMsg: '缺少文件参数或页码' };
+    }
+    try {
+      let pdfBuffer;
+      if (pdfBase64) {
+        pdfBuffer = Buffer.from(pdfBase64, 'base64');
+      } else if (tempFileURL) {
+        pdfBuffer = await httpsDownload(tempFileURL);
+      } else {
+        pdfBuffer = await downloadFromFileID(fileID);
       }
-      return { success: true, pages: pages, pageCount: pageCount };
+      const mupdf = await import('mupdf');
+      const doc = mupdf.Document.openDocument(pdfBuffer, 'application/pdf');
+      const pageNum = parseInt(page);
+      if (pageNum < 0 || pageNum >= doc.countPages()) {
+        doc.destroy();
+        return { success: false, errMsg: '页码超出范围: ' + pageNum };
+      }
+      const mpage = doc.loadPage(pageNum);
+      const scale = 300 / 72; // 300 DPI
+      const pixmap = mpage.toPixmap(
+        mupdf.Matrix.scale(scale, scale),
+        mupdf.ColorSpace.DeviceRGB
+      );
+      const jpgBuffer = Buffer.from(pixmap.asJPEG(85));
+      const base64 = jpgBuffer.toString('base64');
+      pixmap.destroy();
+      mpage.destroy();
+      doc.destroy();
+      // 尝试上传到云存储，失败则降级为 base64 返回
+      try {
+        const cloudPath = 'rendered/' + Date.now() + '_p' + pageNum + '.jpg';
+        const uploadRes = await cloud.uploadFile({
+          cloudPath: cloudPath,
+          fileContent: jpgBuffer,
+        });
+        console.log('uploadFile 成功, fileID:', uploadRes.fileID);
+        return { success: true, page: pageNum, imageFileID: uploadRes.fileID };
+      } catch (uploadErr) {
+        console.error('uploadFile 失败，降级为 base64:', uploadErr.message);
+        // base64 兜底：300 DPI JPEG 85 单页约 300-700KB(base64)，大概率在 1MB 内
+        if (base64.length < 900000) {
+          return { success: true, page: pageNum, image: 'data:image/jpeg;base64,' + base64 };
+        }
+        // 如果仍超限，降低质量重试
+        return { success: false, errMsg: '图片过大(' + (base64.length / 1024 / 1024).toFixed(2) + 'MB)，无法返回' };
+      }
     } catch (err) {
       return { success: false, errMsg: err.message };
     }

@@ -84,11 +84,12 @@
   <view class="recent-section">
     <view class="section-header">
       <text class="section-title">最近阅读</text>
-      <text class="section-more" bindtap="onViewAll">查看全部 ›</text>
+      <text class="section-more" bindtap="onViewAll">{{showAllRecent ? '收起 ›' : '查看全部 ›'}}</text>
     </view>
 
-    <scroll-view class="card-scroll" scroll-x wx:if="{{filteredList.length}}">
-      <view class="card" wx:for="{{filteredList}}" wx:key="id" data-id="{{item.id}}" data-fileid="{{item.fileID}}" bindtap="onCardTap">
+    <!-- 卡片列表 — 两列网格 -->
+    <view class="card-grid" wx:if="{{filteredList.length}}">
+      <view class="card" wx:for="{{displayList}}" wx:key="id" data-id="{{item.id}}" data-fileid="{{item.fileID}}" bindtap="onCardTap">
         <view class="card-top">
           <text class="card-title">{{item.title}}</text>
           <text class="card-fav" wx:if="{{item.isFavorite}}">⭐</text>
@@ -100,10 +101,14 @@
         <view class="progress-bar">
           <view class="progress-fill" style="width: {{item.progress}}%;"></view>
         </view>
-        <text class="card-progress-text">已读 {{item.progress}}%</text>
+        <view class="card-progress-row">
+          <text class="card-progress-text">已读 {{item.progress}}%</text>
+          <text class="card-mastery-text" wx:if="{{item.mastery}}">掌握 {{item.mastery}}%</text>
+        </view>
       </view>
-    </scroll-view>
+    </view>
 
+    <!-- 空状态 -->
     <view class="empty-state" wx:elif="{{!loading}}">
       <view class="empty-illustration">
         <text class="empty-icon">{{searchKeyword ? '🔎' : '📚'}}</text>

@@ -26,10 +26,15 @@
         <text class="top-file-icon">📄</text>
         <text class="top-file-name">{{fileName}}</text>
         <text class="top-file-pages" wx:if="{{paperInfo.pageCount}}">{{paperInfo.pageCount}}页</text>
+        <text class="top-file-progress" wx:if="{{paperInfo.progress || mastery}}">已读{{paperInfo.progress || 0}}% · 掌握{{mastery}}%</text>
         <text class="fav-star {{isFavorite ? 'active' : ''}}" bindtap="onToggleFavorite">{{isFavorite ? '⭐' : '☆'}}</text>
       </view>
       <view class="top-tags" wx:if="{{docTags.length}}">
         <text class="tag-chip-mini" wx:for="{{docTags}}" wx:key="*this">{{item}}</text>
+      </view>
+      <view class="note-type-bar" wx:if="{{noteTypes.length}}">
+        <text class="note-type-chip type-note" wx:if="{{noteTypes.indexOf('note') !== -1}}">📝 笔记</text>
+        <text class="note-type-chip type-annotate" wx:if="{{noteTypes.indexOf('annotate') !== -1}}">🔍 精读</text>
       </view>
     </view>
 

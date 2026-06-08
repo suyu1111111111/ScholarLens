@@ -106,6 +106,15 @@
   margin-left: 10rpx;
 }
 
+.top-file-progress {
+  font-size: 22rpx;
+  color: #1a73e8;
+  background: #e8f0fe;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+  margin-left: 10rpx;
+}
+
 .fav-star {
   font-size: 34rpx;
   margin-left: 8rpx;
@@ -125,6 +134,28 @@
   background: #e8f0fe;
   padding: 3rpx 12rpx;
   border-radius: 10rpx;
+}
+
+.note-type-bar {
+  display: flex;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+
+.note-type-chip {
+  font-size: 20rpx;
+  padding: 3rpx 12rpx;
+  border-radius: 10rpx;
+}
+
+.note-type-chip.type-note {
+  color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.note-type-chip.type-annotate {
+  color: #e37400;
+  background: #fef7e0;
 }
 
 /* 角色标签 */

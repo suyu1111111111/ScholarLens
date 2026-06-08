@@ -1,54 +1,42 @@
 <!--notes.wxml-->
 <view class="page">
-  <view class="tab-bar">
-    <view
-      class="tab-item {{currentTab === 'all' ? 'active' : ''}}"
-      data-tab="all"
-      bindtap="onSwitchTab"
-    >全部</view>
-    <view
-      class="tab-item {{currentTab === 'paper' ? 'active' : ''}}"
-      data-tab="paper"
-      bindtap="onSwitchTab"
-    >按论文</view>
-  </view>
-
   <view class="search-bar">
     <text class="search-icon">🔍</text>
     <input class="search-input" placeholder="搜索笔记" placeholder-class="search-placeholder" value="{{searchKeyword}}" bindinput="onSearchInput" />
   </view>
 
-  <!-- 全部笔记 -->
-  <view class="note-list" wx:if="{{currentTab === 'all' && notes.length}}">
-    <view class="note-card" wx:for="{{notes}}" wx:key="id" data-id="{{item.id}}" bindlongpress="onNoteTap">
-      <view class="note-color-bar" style="background-color: {{item.color}};"></view>
-      <view class="note-body">
-        <text class="note-excerpt" wx:if="{{item.excerpt}}">{{item.excerpt}}</text>
-        <text class="note-annotation">{{item.annotation}}</text>
-      </view>
-      <view class="note-meta">
-        <text class="note-date">{{item.date}}</text>
-        <text class="note-source">{{item.source}}</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 按论文分组 -->
-  <view class="note-list" wx:elif="{{currentTab === 'paper' && groupedNotes.length}}">
-    <view wx:for="{{groupedNotes}}" wx:key="source" class="note-group">
-      <view class="group-header">
-        <view class="group-dot" style="background-color: {{item.color}};"></view>
-        <text class="group-title">{{item.source}}</text>
-        <text class="group-count">{{item.notes.length}} 条笔记</text>
-      </view>
-      <view class="note-card" wx:for="{{item.notes}}" wx:key="id" wx:for-item="note" data-id="{{note.id}}" bindlongpress="onNoteTap">
-        <view class="note-color-bar" style="background-color: {{note.color}};"></view>
-        <view class="note-body">
-          <text class="note-excerpt" wx:if="{{note.excerpt}}">{{note.excerpt}}</text>
-          <text class="note-annotation">{{note.annotation}}</text>
+  <!-- 按论文整合：每篇论文一条记录 -->
+  <view class="note-list" wx:if="{{groupedNotes.length}}">
+    <view class="paper-card" wx:for="{{groupedNotes}}" wx:key="source">
+      <view class="paper-card-header" data-source="{{item.source}}" bindtap="onTogglePaper">
+        <view class="paper-card-icon">📄</view>
+        <view class="paper-card-body">
+          <text class="paper-card-name">{{item.source}}</text>
+          <view class="paper-type-row">
+            <text class="paper-type-tag type-note" wx:if="{{item.hasNote}}">📝 笔记</text>
+            <text class="paper-type-tag type-annotate" wx:if="{{item.hasAnnotate}}">🔍 精读</text>
+          </view>
         </view>
-        <view class="note-meta">
-          <text class="note-date">{{note.date}}</text>
+        <view class="paper-card-right">
+          <text class="paper-card-count">{{item.notes.length}}条</text>
+          <text class="paper-card-arrow">{{item.expanded ? '▴' : '▾'}}</text>
+        </view>
+      </view>
+      <!-- 展开显示具体笔记 -->
+      <view class="paper-card-detail" wx:if="{{item.expanded}}">
+        <view class="note-card" wx:for="{{item.notes}}" wx:key="id" wx:for-item="note" data-id="{{note.id}}" data-fileid="{{note.fileID}}" data-page="{{note.page}}" data-type="{{note.type}}" data-source="{{note.source}}" bindtap="onNoteNavigate">
+          <view class="note-color-bar" style="background-color: {{note.color}};"></view>
+          <view class="note-body">
+            <view class="note-type-row">
+              <text class="note-type-tag {{note.type === 'annotate' ? 'type-annotate' : 'type-note'}}">{{note.type === 'annotate' ? '精读批注' : '笔记'}}</text>
+            </view>
+            <text class="note-excerpt" wx:if="{{note.excerpt}}">{{note.excerpt}}</text>
+            <text class="note-annotation">{{note.annotation}}</text>
+          </view>
+          <view class="note-meta">
+            <text class="note-date">{{note.date}}</text>
+            <text class="note-delete-btn" data-id="{{note.id}}" data-fileid="{{note.fileID}}" catchtap="onDeleteNote">✕</text>
+          </view>
         </view>
       </view>
     </view>

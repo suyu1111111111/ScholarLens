@@ -11,6 +11,8 @@ Page({
     searchMode: 'local',
     searchPapers: [],
     searchingOnline: false,
+    showAllRecent: false,
+    displayList: [],
   },
 
   onShow() {
@@ -18,6 +20,14 @@ Page({
       this.getTabBar().setData({ selected: 0 });
     }
     this.fetchRecentList();
+    // 一次性去重：清理历史重复文件
+    if (!wx.getStorageSync('_dedup_done_v2')) {
+      wx.cloud.callFunction({
+        name: 'pdfSummary',
+        data: { action: 'dedupFiles' },
+        success: () => { wx.setStorageSync('_dedup_done_v2', true); },
+      });
+    }
   },
 
   onSearchModeSwitch() {
@@ -28,11 +38,11 @@ Page({
     }
   },
 
-  fetchRecentList() {
+  fetchRecentList(limit) {
     const that = this;
     wx.cloud.callFunction({
       name: 'pdfSummary',
-      data: { action: 'list' },
+      data: { action: 'list', limit: limit || 50 },
       success: (res) => {
         if (res.result && res.result.success) {
           const list = (res.result.list || []).map((doc) => ({
@@ -40,13 +50,24 @@ Page({
             fileID: doc.fileID,
             title: doc.fileName || '未命名论文',
             date: that.formatDate(doc.createdAt),
-            progress: (doc.paperInfo && doc.paperInfo.pageCount && doc.paperInfo.progress != null) ? Math.min(100, Math.max(1, Math.round(doc.paperInfo.progress / doc.paperInfo.pageCount * 100))) : 0,
+            progress: (() => {
+                const cloudPct = (doc.paperInfo && doc.paperInfo.progress != null) ? doc.paperInfo.progress : 0;
+                try {
+                  const cached = wx.getStorageSync('reading_progress') || {};
+                  const localPct = cached['progress_' + doc.fileID]
+                    || cached['progress_' + encodeURIComponent(doc.fileID)]
+                    || 0;
+                  return Math.max(cloudPct, localPct);
+                } catch (e) { return cloudPct; }
+              })(),
+            mastery: doc.mastery || 0,
             pageCount: doc.paperInfo ? doc.paperInfo.pageCount : 0,
             tags: doc.tags || [],
             isFavorite: doc.isFavorite || false,
           }));
-          that.setData({ recentList: list, loading: false, emptyType: 'noRecord' });
-          that.applyFilters();
+          that.setData({ recentList: list, loading: false, emptyType: 'noRecord' }, () => {
+            that.applyFilters();
+          });
         } else {
           that.setData({ loading: false, emptyType: 'noRecord' });
         }
@@ -151,7 +172,16 @@ Page({
       );
     }
 
-    this.setData({ filteredList: list });
+    this.setData({ filteredList: list }, () => {
+      this.updateDisplayList();
+    });
+  },
+
+  updateDisplayList() {
+    const { filteredList, showAllRecent } = this.data;
+    this.setData({
+      displayList: showAllRecent ? filteredList : filteredList.slice(0, 6),
+    });
   },
 
   onUploadPaper() {
@@ -272,6 +302,10 @@ Page({
   },
 
   onViewAll() {
-    wx.switchTab({ url: '/pages/reader/reader' });
+    const expand = !this.data.showAllRecent;
+    this.setData({ showAllRecent: expand }, () => {
+      this.updateDisplayList();
+    });
+    this.fetchRecentList(expand ? 500 : 50);
   },
 });

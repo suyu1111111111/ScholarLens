@@ -6,26 +6,7 @@
   min-height: 100vh;
   box-sizing: border-box;
   padding-bottom: calc(110rpx + env(safe-area-inset-bottom));
-}
-
-/* 标签切换栏 */
-.tab-bar {
-  display: flex;
-  padding: 20rpx 30rpx;
-  gap: 28rpx;
-}
-
-.tab-item {
-  font-size: 28rpx;
-  color: #999;
-  padding-bottom: 8rpx;
-  border-bottom: 4rpx solid transparent;
-}
-
-.tab-item.active {
-  color: #2b2b4b;
-  font-weight: 600;
-  border-bottom-color: #2b2b4b;
+  padding-top: 30rpx;
 }
 
 /* 搜索框 */
@@ -61,35 +42,137 @@
   padding: 0 30rpx;
 }
 
-.note-card {
-  display: flex;
-  align-items: stretch;
+/* 论文卡片 — 一篇论文一条记录 */
+.paper-card {
+  background: #fff;
+  border-radius: 10rpx;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
   margin-bottom: 20rpx;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
 
+.paper-card-header {
+  display: flex;
+  align-items: center;
+  padding: 24rpx;
+}
+
+.paper-card-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.paper-card-body {
+  flex: 1;
+}
+
+.paper-card-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.paper-type-row {
+  display: flex;
+  gap: 10rpx;
+  margin-top: 8rpx;
+}
+
+.paper-type-tag {
+  font-size: 20rpx;
+  padding: 2rpx 10rpx;
+  border-radius: 8rpx;
+}
+
+.paper-type-tag.type-note {
+  color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.paper-type-tag.type-annotate {
+  color: #e37400;
+  background: #fef7e0;
+}
+
+.paper-card-right {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.paper-card-count {
+  font-size: 22rpx;
+  color: #bbb;
+  margin-right: 8rpx;
+}
+
+.paper-card-arrow {
+  font-size: 24rpx;
+  color: #ccc;
+  padding: 4rpx;
+}
+
+/* 展开的笔记详情 */
+.paper-card-detail {
+  border-top: 1rpx solid #f0f0f0;
+  padding: 8rpx 0;
+}
+
+.note-card {
+  display: flex;
+  align-items: stretch;
+  margin: 0 16rpx 12rpx;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.note-card:last-child {
+  margin-bottom: 16rpx;
+}
+
 .note-color-bar {
-  width: 8rpx;
+  width: 6rpx;
   flex-shrink: 0;
 }
 
 .note-body {
   flex: 1;
-  padding: 24rpx;
+  padding: 16rpx 20rpx;
   display: flex;
   flex-direction: column;
-  gap: 12rpx;
+}
+
+.note-type-row {
+  margin-bottom: 6rpx;
+}
+
+.note-type-tag {
+  font-size: 18rpx;
+  padding: 1rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+.type-note {
+  color: #1a73e8;
+  background: #e8f0fe;
+}
+
+.type-annotate {
+  color: #e37400;
+  background: #fef7e0;
 }
 
 .note-excerpt {
-  font-size: 28rpx;
-  color: #333;
-  line-height: 1.6;
+  font-size: 26rpx;
+  color: #555;
+  line-height: 1.5;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -105,52 +188,20 @@
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
-  padding: 24rpx 24rpx 24rpx 0;
+  padding: 16rpx 20rpx 16rpx 0;
   flex-shrink: 0;
 }
 
 .note-date {
-  font-size: 22rpx;
-  color: #bbb;
-  margin-bottom: 8rpx;
-}
-
-.note-source {
   font-size: 20rpx;
-  color: #ccc;
-}
-
-/* 按论文分组 */
-.note-group {
-  margin-bottom: 32rpx;
-}
-
-.group-header {
-  display: flex;
-  align-items: center;
-  margin-bottom: 16rpx;
-}
-
-.group-dot {
-  width: 12rpx;
-  height: 12rpx;
-  border-radius: 50%;
-  margin-right: 12rpx;
-}
-
-.group-title {
-  flex: 1;
-  font-size: 26rpx;
-  font-weight: 600;
-  color: #333;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.group-count {
-  font-size: 22rpx;
   color: #bbb;
+}
+
+.note-delete-btn {
+  font-size: 24rpx;
+  color: #ccc;
+  padding: 4rpx 8rpx;
+  margin-top: 6rpx;
 }
 
 /* 空状态 */

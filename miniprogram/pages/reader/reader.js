@@ -26,6 +26,8 @@ Page({
     // 论文管理
     docTags: [],
     isFavorite: false,
+    mastery: 0,
+    noteTypes: [],
     showTagInput: false,
     tagInputValue: '',
 
@@ -55,7 +57,13 @@ Page({
     const openFileID = app.globalData.openFileID;
     if (openFileID) {
       app.globalData.openFileID = null;
-      this.loadExistingDoc(openFileID);
+      const targetPage = app.globalData.targetNotePage;
+      app.globalData.targetNotePage = undefined;
+      const pageNum = parseInt(targetPage);
+      this.loadExistingDoc(openFileID, isNaN(pageNum) ? undefined : pageNum);
+    } else if (this.data.fileID && this.data.status === 'summarized') {
+      // 从阅读页返回时刷新进度（已有文档但 openFileID 已清空）
+      this.refreshProgress();
     }
     // 控制分享菜单
     if (this.data.fileID && this.data.status === 'summarized') {
@@ -82,8 +90,26 @@ Page({
     };
   },
 
+  refreshProgress() {
+    if (!this.data.fileID) return;
+    const that = this;
+    wx.cloud.callFunction({
+      name: 'pdfSummary',
+      data: { action: 'get', fileID: this.data.fileID },
+      success: (res) => {
+        if (res.result && res.result.success) {
+          that.setData({
+            paperInfo: res.result.paperInfo || {},
+            mastery: res.result.mastery || 0,
+            noteTypes: res.result.noteTypes || [],
+          });
+        }
+      },
+    });
+  },
+
   // 从首页卡片加载已有文档
-  loadExistingDoc(fileID) {
+  loadExistingDoc(fileID, autoReadPage) {
     const that = this;
     this.setData({ status: 'summarized', fileID: fileID, summaryText: '', summaryError: '' });
 
@@ -99,10 +125,17 @@ Page({
             summary: summary,
             summaryText: typeof summary === 'string' ? summary : summary.text,
             paperInfo: res.result.paperInfo || {},
+            mastery: res.result.mastery || 0,
             docTags: res.result.tags || [],
             isFavorite: res.result.isFavorite || false,
+            noteTypes: res.result.noteTypes || [],
             activeRole: firstRole,
           });
+          // 从笔记页跳转：自动打开阅读页到指定页码
+          if (typeof autoReadPage === 'number' && autoReadPage >= 0) {
+            that._autoReadTarget = autoReadPage;
+            that.onStartRead();
+          }
         }
       },
     });
@@ -205,6 +238,8 @@ Page({
             summary: summary,
             summaryText: typeof summary === 'string' ? summary : summary.text,
             paperInfo: res.result.paperInfo || {},
+            mastery: res.result.mastery || 0,
+            noteTypes: res.result.noteTypes || [],
             summaryLoading: false,
             summaryError: '',
             activeRole: role,
@@ -238,7 +273,7 @@ Page({
     this.generateSummary(fileID, fileName, role);
   },
 
-  // 开始阅读：用 fileID 调云函数渲染 PDF 页面为图片
+  // 开始阅读：优先用 tempFileURL，失败时用 fileID
   onStartRead() {
     const { fileID, fileName } = this.data;
     if (!fileID) {
@@ -249,37 +284,115 @@ Page({
     const app = getApp();
     const that = this;
 
-    // 传 fileID 而非 base64，避免数据量过大超限
+    // 先获取临时下载链接
+    wx.cloud.getTempFileURL({
+      fileList: [fileID],
+      success: (tmpRes) => {
+        const tempFileURL = (tmpRes.fileList && tmpRes.fileList[0] && tmpRes.fileList[0].tempFileURL) || '';
+        that._callGetPages(fileID, fileName, tempFileURL, app);
+      },
+      fail: () => {
+        that._callGetPages(fileID, fileName, '', app);
+      },
+    });
+  },
+
+  _callGetPages(fileID, fileName, tempFileURL, app) {
+    const that = this;
     wx.cloud.callFunction({
       name: 'pdfSummary',
-      data: { action: 'getPages', fileID: fileID },
+      data: { action: 'getPages', fileID: fileID, tempFileURL: tempFileURL },
       success: (cfRes) => {
-        wx.hideLoading();
         if (cfRes.result && cfRes.result.success) {
-          app.globalData._pageImages = cfRes.result.pages || [];
-          app.globalData._pageCount = cfRes.result.pageCount;
-          app.globalData._pdfBase64 = null;
+          const pageCount = cfRes.result.pageCount || 0;
+          // 存必要信息，供 read-text 按需加载
+          app.globalData._pageFileID = fileID;
+          app.globalData._pageTempURL = tempFileURL;
+          app.globalData._pageCount = pageCount;
+          // 渲染目标页（从笔记跳转时定位到批注页，否则第 0 页）
+          const startPage = that._autoReadTarget || 0;
+          that._loadPageImage(startPage, fileID, fileName, app);
         } else {
+          wx.hideLoading();
           console.error('getPages 返回失败:', cfRes.result);
           app.globalData._pageImages = null;
-          app.globalData._pdfBase64 = null;
+          that._navigateToRead(fileID, fileName);
         }
-        that._navigateToRead(fileID, fileName);
       },
       fail: (err) => {
         wx.hideLoading();
         console.error('getPages 调用失败:', err);
         app.globalData._pageImages = null;
-        app.globalData._pdfBase64 = null;
+        that._navigateToRead(fileID, fileName);
+      },
+    });
+  },
+
+  _loadPageImage(pageNum, fileID, fileName, app) {
+    const that = this;
+    wx.cloud.callFunction({
+      name: 'pdfSummary',
+      data: {
+        action: 'getPage',
+        tempFileURL: app.globalData._pageTempURL,
+        page: pageNum,
+      },
+      success: (cfRes) => {
+        if (cfRes.result && cfRes.result.success) {
+          // 优先 imageFileID（云存储），备用 image（base64）
+          if (cfRes.result.imageFileID) {
+            wx.cloud.getTempFileURL({
+              fileList: [cfRes.result.imageFileID],
+              success: (urlRes) => {
+                wx.hideLoading();
+                const url = (urlRes.fileList && urlRes.fileList[0] && urlRes.fileList[0].tempFileURL) || '';
+                const images = new Array(app.globalData._pageCount);
+                images[pageNum] = url;
+                app.globalData._pageImages = images;
+                that._navigateToRead(fileID, fileName);
+              },
+              fail: () => {
+                wx.hideLoading();
+                app.globalData._pageImages = null;
+                that._navigateToRead(fileID, fileName);
+              },
+            });
+          } else if (cfRes.result.image) {
+            wx.hideLoading();
+            const images = new Array(app.globalData._pageCount);
+            images[pageNum] = cfRes.result.image;
+            app.globalData._pageImages = images;
+            that._navigateToRead(fileID, fileName);
+          } else {
+            wx.hideLoading();
+            console.error('getPage 返回无图片数据:', cfRes.result);
+            app.globalData._pageImages = null;
+            that._navigateToRead(fileID, fileName);
+          }
+        } else {
+          wx.hideLoading();
+          console.error('getPage 返回失败:', cfRes.result);
+          app.globalData._pageImages = null;
+          that._navigateToRead(fileID, fileName);
+        }
+      },
+      fail: (err) => {
+        wx.hideLoading();
+        console.error('getPage 调用失败:', err);
+        app.globalData._pageImages = null;
         that._navigateToRead(fileID, fileName);
       },
     });
   },
 
   _navigateToRead(fileID, fileName) {
-    wx.navigateTo({
-      url: '/pages/read-text/read-text?fileID=' + encodeURIComponent(fileID || '') + '&fileName=' + encodeURIComponent(fileName || ''),
-    });
+    const progress = (this.data.paperInfo && this.data.paperInfo.progress) || 0;
+    let url = '/pages/read-text/read-text?fileID=' + encodeURIComponent(fileID || '') + '&fileName=' + encodeURIComponent(fileName || '') + '&progress=' + progress;
+    if (typeof this._autoReadTarget === 'number' && this._autoReadTarget >= 0) {
+      url += '&page=' + this._autoReadTarget;
+      this._autoReadTarget = undefined;
+    }
+    wx.navigateTo({ url: url });
   },
 
   onToolTap(e) {
@@ -297,7 +410,7 @@ Page({
     const that = this;
     wx.cloud.callFunction({
       name: 'pdfSummary',
-      data: { action: 'mindmap', summaryText: summaryText },
+      data: { action: 'mindmap', summaryText: summaryText, fileID: this.data.fileID },
       success: (res) => {
         if (res.result && res.result.success && res.result.tree) {
           that.setData({ mindmapTree: res.result.tree, mindmapLoading: false });
@@ -577,6 +690,7 @@ Page({
         fileName: fileName,
         excerpt: noteExcerpt.trim(),
         annotation: noteAnnotation.trim(),
+        type: 'note',
       },
       success: () => {
         wx.showToast({ title: '笔记已保存', icon: 'success' });
